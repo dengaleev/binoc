@@ -13,6 +13,7 @@ services:
   caddy:
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "caddy"
     volumes:
       - ./index.html:/srv/index.html:ro
     depends_on:

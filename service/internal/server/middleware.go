@@ -44,6 +44,9 @@ func otelMiddleware(next http.Handler) http.Handler {
 			}
 			return r.Method + " " + r.URL.Path
 		}),
+		otelhttp.WithFilter(func(r *http.Request) bool {
+			return r.URL.Path != "/metrics"
+		}),
 	)(next)
 }
 

@@ -5,6 +5,11 @@
 }
 
 :80 {
+	# /metrics is served without tracing to avoid noise from Prometheus scrapes
+	handle /metrics {
+		reverse_proxy app:8080
+	}
+
 	tracing
 
 	handle / {
@@ -24,9 +29,6 @@
 		reverse_proxy app:8080
 	}
 	handle /readyz {
-		reverse_proxy app:8080
-	}
-	handle /metrics {
 		reverse_proxy app:8080
 	}
 }
