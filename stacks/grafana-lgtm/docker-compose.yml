@@ -8,7 +8,8 @@ services:
       TRACING_ENABLED: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4317"
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
 
   caddy:
     environment:
@@ -17,7 +18,8 @@ services:
     volumes:
       - ./index.html:/srv/index.html:ro
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.148.0
@@ -25,9 +27,12 @@ services:
     volumes:
       - ./otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
     depends_on:
-      - loki
-      - tempo
-      - prometheus
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
     restart: unless-stopped
 
   prometheus:
@@ -42,6 +47,12 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     restart: unless-stopped
 
   loki:
@@ -76,10 +87,19 @@ services:
       - grafana-data:/var/lib/grafana
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     depends_on:
-      - prometheus
-      - loki
-      - tempo
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

@@ -14,7 +14,3 @@ scrape_configs:
     scrape_protocols: ["OpenMetricsText1.0.0", "PrometheusText0.0.4"]
     static_configs:
       - targets: ["app:8080"]
-
-  - job_name: prometheus
-    static_configs:
-      - targets: ["localhost:9090"]

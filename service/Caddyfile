@@ -3,8 +3,14 @@
 }
 
 :80 {
-	# /metrics is served without tracing to avoid noise from Prometheus scrapes
+	# Health probes and metrics are served without tracing to avoid noise
 	handle /metrics {
+		reverse_proxy app:8080
+	}
+	handle /healthz {
+		reverse_proxy app:8080
+	}
+	handle /readyz {
 		reverse_proxy app:8080
 	}
 
@@ -21,12 +27,6 @@
 		reverse_proxy app:8080
 	}
 	handle /chain* {
-		reverse_proxy app:8080
-	}
-	handle /healthz {
-		reverse_proxy app:8080
-	}
-	handle /readyz {
 		reverse_proxy app:8080
 	}
 }

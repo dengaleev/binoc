@@ -57,14 +57,20 @@ func otelMiddleware(next http.Handler) http.Handler {
 			return r.Method + " " + r.URL.Path
 		}),
 		otelhttp.WithFilter(func(r *http.Request) bool {
-			return r.URL.Path != "/metrics"
+			return !isInternalPath(r.URL.Path)
 		}),
 	)(next)
 }
 
+// isInternalPath returns true for paths that should be excluded from
+// tracing and logging (health probes, metrics scrapes).
+func isInternalPath(path string) bool {
+	return path == "/metrics" || path == "/healthz" || path == "/readyz"
+}
+
 func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/metrics" {
+		if isInternalPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}

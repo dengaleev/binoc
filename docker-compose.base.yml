@@ -20,6 +20,12 @@ services:
       SELF_URL: "http://caddy:80"
     volumes:
       - app-data:/data
+    healthcheck:
+      test: ["CMD", "/binoc", "-healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     restart: unless-stopped
 
   caddy:
@@ -28,8 +34,15 @@ services:
       - "80:80"
     volumes:
       - ./service/Caddyfile:/etc/caddy/Caddyfile:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

@@ -55,6 +55,11 @@ func New(ctx context.Context, dsn string) (*Store, error) {
 	return s, nil
 }
 
+// Ping verifies the database connection is alive.
+func (s *Store) Ping(ctx context.Context) error {
+	return s.db.PingContext(ctx)
+}
+
 // Close closes the database connection.
 func (s *Store) Close() error {
 	return s.db.Close()
