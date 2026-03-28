@@ -1,50 +1,28 @@
 package config
 
 import (
-	"os"
-	"strings"
+	"log"
+
+	"github.com/caarlos0/env/v11"
 )
 
 // Config holds all service configuration, sourced from environment variables.
 type Config struct {
-	Addr                   string
-	LogFormat              string
-	LogLevel               string
-	MetricsEnabled         bool
-	TracingEnabled         bool
-	OTELExporterEndpoint   string
-	ServiceName            string
-	DBPath                 string
+	Addr                 string `env:"ADDR"                          envDefault:":8080"`
+	LogFormat            string `env:"LOG_FORMAT"                    envDefault:"json"`
+	LogLevel             string `env:"LOG_LEVEL"                     envDefault:"info"`
+	MetricsEnabled       bool   `env:"METRICS_ENABLED"               envDefault:"true"`
+	TracingEnabled       bool   `env:"TRACING_ENABLED"               envDefault:"true"`
+	OTELExporterEndpoint string `env:"OTEL_EXPORTER_OTLP_ENDPOINT"   envDefault:"localhost:4317"`
+	ServiceName          string `env:"SERVICE_NAME"                  envDefault:"echo"`
+	DBPath               string `env:"DB_PATH"                       envDefault:""`
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() Config {
-	return Config{
-		Addr:                   envOr("ADDR", ":8080"),
-		LogFormat:              envOr("LOG_FORMAT", "json"),
-		LogLevel:               envOr("LOG_LEVEL", "info"),
-		MetricsEnabled:         envBool("METRICS_ENABLED", true),
-		TracingEnabled:         envBool("TRACING_ENABLED", true),
-		OTELExporterEndpoint:   envOr("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
-		ServiceName:            envOr("SERVICE_NAME", "echo"),
-		DBPath:                 envOr("DB_PATH", ""),
+	cfg := Config{}
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("parsing config: %v", err)
 	}
-}
-
-func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
-func envBool(key string, fallback bool) bool {
-	v := os.Getenv(key)
-	if v == "" {
-		if fallback {
-			return true
-		}
-		return false
-	}
-	return strings.EqualFold(v, "true") || v == "1"
+	return cfg
 }

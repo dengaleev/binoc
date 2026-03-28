@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/XSAM/otelsql v0.41.0
+	github.com/caarlos0/env/v11 v11.4.0
 	github.com/prometheus/client_golang v1.20.5
 	go.opentelemetry.io/contrib/bridges/otelslog v0.12.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
