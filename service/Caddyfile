@@ -1,3 +1,9 @@
 :80 {
-	reverse_proxy echo:8080
+	handle / {
+		root * /srv
+		file_server
+	}
+	handle /echo* {
+		reverse_proxy echo:8080
+	}
 }

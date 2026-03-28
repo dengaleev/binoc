@@ -2,84 +2,36 @@
 
 Observability playground — a minimal Go service paired with different monitoring stacks.
 
-## Architecture
-
-```mermaid
-graph LR
-    Client -->|:80| Caddy
-    Caddy -->|:8080| Echo[Echo Service]
-    Echo -->|OTLP gRPC :4317| Collector[OTel Collector]
-    Collector -->|remote write| Prometheus
-    Collector -->|OTLP| Tempo
-    Collector -->|push| Loki
-    Prometheus --> Grafana
-    Tempo --> Grafana
-    Loki --> Grafana
-    Echo -->|/metrics| Prometheus
-```
-
 ## Quickstart
 
 ```bash
-make up        # builds echo service, starts Grafana LGTM stack
+make up                       # starts the default stack (grafana-lgtm)
+make up STACK=grafana-lgtm    # or pick one explicitly
+make list                     # show available stacks
 ```
 
-Open:
+Open http://localhost to see the navigation page, or go directly:
 
-| Service    | URL                    |
-|------------|------------------------|
-| Echo (via Caddy) | http://localhost       |
-| Grafana    | http://localhost:3000  |
-| Prometheus | http://localhost:9090  |
-
-Try it:
+- **Grafana** http://localhost:3000 (admin / admin)
+- **Prometheus** http://localhost:9090
 
 ```bash
 curl localhost/echo?msg=hello
 curl -X POST -d 'ping' localhost/echo
 ```
 
-Default Grafana credentials: `admin` / `admin`.
-
 ## Stacks
 
-| Stack          | Directory                  | Description                            |
-|----------------|----------------------------|----------------------------------------|
-| `grafana-lgtm` | `stacks/grafana-lgtm/`     | Loki + Grafana + Tempo + Prometheus    |
-
-Select a stack: `make up STACK=grafana-lgtm`
+| Stack          | Description                         |
+|----------------|-------------------------------------|
+| `grafana-lgtm` | Loki, Grafana, Tempo, Prometheus   |
 
 ## Make Targets
 
-| Target   | Description                          |
-|----------|--------------------------------------|
-| `up`     | Build and start the stack            |
-| `down`   | Stop the stack and remove volumes    |
-| `logs`   | Tail logs from all services          |
-| `build`  | Build the echo service image only    |
-| `list`   | List available stacks                |
-
-## Project Structure
-
-```
-docker-compose.base.yml      # shared services (echo + caddy)
-service/
-  cmd/echo/main.go           # entrypoint
-  internal/
-    config/                   # env-based configuration
-    server/                   # HTTP server, routes, middleware
-    instrument/               # logging, metrics, tracing setup
-  Dockerfile                  # multi-stage distroless build
-  Caddyfile                   # reverse proxy config
-
-stacks/
-  grafana-lgtm/
-    docker-compose.yml        # stack definition (includes base)
-    otel-collector.yml        # OTel Collector pipelines
-    prometheus.yml            # scrape config
-    loki.yml                  # log storage config
-    tempo.yml                 # trace storage config
-    provisioning/             # Grafana auto-provisioning
-```
-
-Each stack's `docker-compose.yml` includes `docker-compose.base.yml` so the echo service and Caddy proxy are defined once and shared across stacks.
+| Target  | Description                        |
+|---------|------------------------------------|
+| `up`    | Build and start the stack          |
+| `down`  | Stop the stack and remove volumes  |
+| `logs`  | Tail logs from all services        |
+| `build` | Build the echo service image       |
+| `list`  | List available stacks              |

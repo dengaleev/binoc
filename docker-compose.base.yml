@@ -22,6 +22,7 @@ services:
       - "80:80"
     volumes:
       - ./service/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./service/index.html:/srv/index.html:ro
     depends_on:
       - echo
     restart: unless-stopped
