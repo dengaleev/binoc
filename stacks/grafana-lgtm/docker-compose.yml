@@ -15,7 +15,7 @@ services:
       - ./index.html:/srv/index.html:ro
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.115.0
+    image: otel/opentelemetry-collector-contrib:0.116.0
     command: ["--config=/etc/otelcol/config.yml"]
     volumes:
       - ./otel-collector.yml:/etc/otelcol/config.yml:ro
