@@ -6,10 +6,22 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dengaleev/binoc/service/internal/instrument"
 )
+
+// traceExemplar extracts a trace_id exemplar label from the request context.
+// Returns nil if no active trace span exists.
+func traceExemplar(r *http.Request) prometheus.Labels {
+	spanCtx := trace.SpanContextFromContext(r.Context())
+	if !spanCtx.HasTraceID() {
+		return nil
+	}
+	return prometheus.Labels{"trace_id": spanCtx.TraceID().String()}
+}
 
 // responseWriter wraps http.ResponseWriter to capture status code and bytes written.
 type responseWriter struct {
@@ -52,18 +64,31 @@ func otelMiddleware(next http.Handler) http.Handler {
 
 func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/metrics" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 
 		next.ServeHTTP(rw, r)
 
-		logger.Info("request",
+		attrs := []any{
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rw.status,
 			"duration_ms", time.Since(start).Milliseconds(),
 			"bytes", rw.bytes,
-		)
+		}
+
+		spanCtx := trace.SpanContextFromContext(r.Context())
+		if spanCtx.HasTraceID() {
+			attrs = append(attrs, "trace_id", spanCtx.TraceID().String())
+			attrs = append(attrs, "span_id", spanCtx.SpanID().String())
+		}
+
+		logger.Info("request", attrs...)
 	})
 }
 
@@ -81,8 +106,9 @@ func metricsMiddleware(m *instrument.Metrics, next http.Handler) http.Handler {
 		method := r.Method
 		code := fmt.Sprintf("%d", rw.status)
 
-		m.RequestsTotal.WithLabelValues(method, route, code).Inc()
-		m.RequestDuration.WithLabelValues(method, route).Observe(time.Since(start).Seconds())
-		m.ResponseSize.WithLabelValues(method, route).Observe(float64(rw.bytes))
+		exemplar := traceExemplar(r)
+		m.RequestsTotal.WithLabelValues(method, route, code).(prometheus.ExemplarAdder).AddWithExemplar(1, exemplar)
+		m.RequestDuration.WithLabelValues(method, route).(prometheus.ExemplarObserver).ObserveWithExemplar(time.Since(start).Seconds(), exemplar)
+		m.ResponseSize.WithLabelValues(method, route).(prometheus.ExemplarObserver).ObserveWithExemplar(float64(rw.bytes), exemplar)
 	})
 }

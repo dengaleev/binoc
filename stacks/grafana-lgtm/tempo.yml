@@ -32,3 +32,10 @@ metrics_generator:
       dimensions: []
   traces_storage:
     path: /var/tempo/generator/traces
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics

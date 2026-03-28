@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/dengaleev/binoc/service/internal/instrument"
@@ -66,7 +67,10 @@ func New(opts ...Option) *Server {
 	s.mux.HandleFunc("POST /echo", s.handlePostEcho)
 	s.mux.HandleFunc("GET /healthz", handleHealthz)
 	s.mux.HandleFunc("GET /readyz", handleReadyz)
-	s.mux.Handle("GET /metrics", promhttp.Handler())
+	s.mux.Handle("GET /metrics", promhttp.HandlerFor(
+		prometheus.DefaultGatherer,
+		promhttp.HandlerOpts{EnableOpenMetrics: true},
+	))
 
 	if s.store != nil {
 		s.mux.HandleFunc("POST /notes", s.handleCreateNote)

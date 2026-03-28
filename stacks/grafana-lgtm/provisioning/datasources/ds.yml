@@ -15,6 +15,13 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherType: label
+          matcherName: trace_id
+          url: "$${__value.raw}"
+          datasourceUid: tempo
 
   - name: Tempo
     type: tempo
@@ -25,7 +32,17 @@ datasources:
     jsonData:
       tracesToLogsV2:
         datasourceUid: loki
+        filterByTraceID: true
+        filterBySpanID: false
+        tags:
+          - key: service.name
+            value: service_name
       tracesToMetrics:
         datasourceUid: prometheus
+        tags:
+          - key: service.name
+            value: job
       lokiSearch:
         datasourceUid: loki
+      serviceMap:
+        datasourceUid: prometheus
