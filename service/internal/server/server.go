@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/dengaleev/binoc/service/internal/instrument"
+	"github.com/dengaleev/binoc/service/internal/store"
 )
 
 // Option configures the server.
@@ -21,6 +22,7 @@ type Server struct {
 	logger  *slog.Logger
 	metrics *instrument.Metrics
 	tracer  string // tracer name for OTEL spans
+	store   *store.Store
 }
 
 // WithLogger sets the server logger.
@@ -38,6 +40,11 @@ func WithTracer(name string) Option {
 	return func(s *Server) { s.tracer = name }
 }
 
+// WithStore sets the SQLite store for the notes API.
+func WithStore(st *store.Store) Option {
+	return func(s *Server) { s.store = st }
+}
+
 // New creates a configured Server with all routes registered.
 func New(opts ...Option) *Server {
 	s := &Server{
@@ -53,6 +60,13 @@ func New(opts ...Option) *Server {
 	s.mux.HandleFunc("GET /healthz", handleHealthz)
 	s.mux.HandleFunc("GET /readyz", handleReadyz)
 	s.mux.Handle("GET /metrics", promhttp.Handler())
+
+	if s.store != nil {
+		s.mux.HandleFunc("POST /notes", s.handleCreateNote)
+		s.mux.HandleFunc("GET /notes", s.handleListNotes)
+		s.mux.HandleFunc("GET /notes/{id}", s.handleGetNote)
+		s.mux.HandleFunc("DELETE /notes/{id}", s.handleDeleteNote)
+	}
 
 	return s
 }

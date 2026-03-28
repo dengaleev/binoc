@@ -6,4 +6,7 @@
 	handle /echo* {
 		reverse_proxy echo:8080
 	}
+	handle /notes* {
+		reverse_proxy echo:8080
+	}
 }

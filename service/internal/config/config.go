@@ -14,6 +14,7 @@ type Config struct {
 	TracingEnabled         bool
 	OTELExporterEndpoint   string
 	ServiceName            string
+	DBPath                 string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -26,6 +27,7 @@ func Load() Config {
 		TracingEnabled:         envBool("TRACING_ENABLED", true),
 		OTELExporterEndpoint:   envOr("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
 		ServiceName:            envOr("SERVICE_NAME", "echo"),
+		DBPath:                 envOr("DB_PATH", ""),
 	}
 }
 

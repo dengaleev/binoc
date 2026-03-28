@@ -16,6 +16,9 @@ services:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
       SERVICE_NAME: "echo"
+      DB_PATH: "/data/notes.db"
+    volumes:
+      - echo-data:/data
     restart: unless-stopped
 
   caddy:
@@ -27,3 +30,6 @@ services:
     depends_on:
       - echo
     restart: unless-stopped
+
+volumes:
+  echo-data:
