@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dengaleev/binoc/service/internal/instrument"
 )
@@ -38,22 +36,12 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-func tracingMiddleware(tracerName string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tracer := otel.Tracer(tracerName)
-		ctx, span := tracer.Start(r.Context(), fmt.Sprintf("%s %s", r.Method, r.URL.Path),
-			trace.WithAttributes(
-				attribute.String("http.method", r.Method),
-				attribute.String("http.route", r.URL.Path),
-			),
-		)
-		defer span.End()
-
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rw, r.WithContext(ctx))
-
-		span.SetAttributes(attribute.Int("http.status_code", rw.status))
-	})
+func otelMiddleware(next http.Handler) http.Handler {
+	return otelhttp.NewMiddleware("echo",
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, r.Pattern)
+		}),
+	)(next)
 }
 
 func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {

@@ -44,7 +44,7 @@ func main() {
 				logger.Error("tracing shutdown error", "error", err)
 			}
 		}()
-		opts = append(opts, server.WithTracer(cfg.ServiceName))
+		opts = append(opts, server.WithTracing())
 		logger.Info("tracing enabled", "endpoint", cfg.OTELExporterEndpoint)
 
 		otelHandler, logShutdown, err := instrument.SetupOTELLogging(ctx, cfg.OTELExporterEndpoint, cfg.ServiceName)

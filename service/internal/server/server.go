@@ -21,7 +21,7 @@ type Server struct {
 	mux     *http.ServeMux
 	logger  *slog.Logger
 	metrics *instrument.Metrics
-	tracer  string // tracer name for OTEL spans
+	tracing bool
 	store   *store.Store
 }
 
@@ -35,9 +35,9 @@ func WithMetrics(m *instrument.Metrics) Option {
 	return func(s *Server) { s.metrics = m }
 }
 
-// WithTracer sets the OTEL tracer name.
-func WithTracer(name string) Option {
-	return func(s *Server) { s.tracer = name }
+// WithTracing enables OpenTelemetry HTTP instrumentation.
+func WithTracing() Option {
+	return func(s *Server) { s.tracing = true }
 }
 
 // WithStore sets the SQLite store for the notes API.
@@ -80,8 +80,8 @@ func (s *Server) Handler() http.Handler {
 		h = metricsMiddleware(s.metrics, h)
 	}
 	h = loggingMiddleware(s.logger, h)
-	if s.tracer != "" {
-		h = tracingMiddleware(s.tracer, h)
+	if s.tracing {
+		h = otelMiddleware(h)
 	}
 
 	return h
