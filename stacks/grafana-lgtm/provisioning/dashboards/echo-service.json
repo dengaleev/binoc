@@ -164,7 +164,7 @@
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "{service_name=\"binoc\"} | json",
+          "expr": "{service_name=\"binoc\"}",
           "refId": "A"
         }
       ],
