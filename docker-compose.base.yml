@@ -1,5 +1,6 @@
 # Shared services: the echo app and its reverse proxy.
 # Each stack's docker-compose.yml extends this via `include`.
+# Stack-specific env vars (OTEL endpoint, feature flags) belong in the stack compose.
 
 services:
   echo:
@@ -10,9 +11,6 @@ services:
       ADDR: ":8080"
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
-      METRICS_ENABLED: "true"
-      TRACING_ENABLED: "true"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4317"
       SERVICE_NAME: "echo"
     restart: unless-stopped
 
@@ -22,7 +20,6 @@ services:
       - "80:80"
     volumes:
       - ./service/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./service/index.html:/srv/index.html:ro
     depends_on:
       - echo
     restart: unless-stopped

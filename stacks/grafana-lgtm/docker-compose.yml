@@ -3,8 +3,16 @@ include:
 
 services:
   echo:
+    environment:
+      METRICS_ENABLED: "true"
+      TRACING_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4317"
     depends_on:
       - otel-collector
+
+  caddy:
+    volumes:
+      - ./index.html:/srv/index.html:ro
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.115.0
