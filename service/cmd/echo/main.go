@@ -65,7 +65,7 @@ func main() {
 	}
 
 	if cfg.DBPath != "" {
-		db, err := store.New(ctx, cfg.DBPath, cfg.ServiceName)
+		db, err := store.New(ctx, cfg.DBPath)
 		if err != nil {
 			logger.Error("failed to open database", "error", err)
 			os.Exit(1)
