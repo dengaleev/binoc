@@ -1,0 +1,27 @@
+# Shared services: the echo app and its reverse proxy.
+# Each stack's docker-compose.yml extends this via `include`.
+
+services:
+  echo:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    environment:
+      ADDR: ":8080"
+      LOG_FORMAT: "json"
+      LOG_LEVEL: "info"
+      METRICS_ENABLED: "true"
+      TRACING_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4317"
+      SERVICE_NAME: "echo"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./service/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - echo
+    restart: unless-stopped

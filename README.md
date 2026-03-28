@@ -51,31 +51,35 @@ Select a stack: `make up STACK=grafana-lgtm`
 
 ## Make Targets
 
-| Target   | Description                       |
-|----------|-----------------------------------|
-| `up`     | Build and start the stack         |
-| `down`   | Stop the stack                    |
-| `logs`   | Tail logs from all services       |
-| `build`  | Build the echo service image only |
+| Target   | Description                          |
+|----------|--------------------------------------|
+| `up`     | Build and start the stack            |
+| `down`   | Stop the stack and remove volumes    |
+| `logs`   | Tail logs from all services          |
+| `build`  | Build the echo service image only    |
+| `list`   | List available stacks                |
 
 ## Project Structure
 
 ```
+docker-compose.base.yml      # shared services (echo + caddy)
 service/
-  cmd/echo/main.go          # entrypoint
+  cmd/echo/main.go           # entrypoint
   internal/
-    config/                  # env-based configuration
-    server/                  # HTTP server, routes, middleware
-    instrument/              # logging, metrics, tracing setup
-  Dockerfile                 # multi-stage distroless build
-  Caddyfile                  # reverse proxy config
+    config/                   # env-based configuration
+    server/                   # HTTP server, routes, middleware
+    instrument/               # logging, metrics, tracing setup
+  Dockerfile                  # multi-stage distroless build
+  Caddyfile                   # reverse proxy config
 
 stacks/
   grafana-lgtm/
-    docker-compose.yml       # full stack definition
-    otel-collector.yml       # OTel Collector pipelines
-    prometheus.yml           # scrape config
-    loki.yml                 # log storage config
-    tempo.yml                # trace storage config
-    provisioning/            # Grafana auto-provisioning
+    docker-compose.yml        # stack definition (includes base)
+    otel-collector.yml        # OTel Collector pipelines
+    prometheus.yml            # scrape config
+    loki.yml                  # log storage config
+    tempo.yml                 # trace storage config
+    provisioning/             # Grafana auto-provisioning
 ```
+
+Each stack's `docker-compose.yml` includes `docker-compose.base.yml` so the echo service and Caddy proxy are defined once and shared across stacks.
