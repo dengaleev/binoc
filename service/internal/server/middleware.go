@@ -37,9 +37,12 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 }
 
 func otelMiddleware(next http.Handler) http.Handler {
-	return otelhttp.NewMiddleware("echo",
+	return otelhttp.NewMiddleware("binoc",
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-			return fmt.Sprintf("%s %s", r.Method, r.Pattern)
+			if r.Pattern != "" {
+				return r.Pattern
+			}
+			return r.Method + " " + r.URL.Path
 		}),
 	)(next)
 }
@@ -71,7 +74,7 @@ func metricsMiddleware(m *instrument.Metrics, next http.Handler) http.Handler {
 
 		next.ServeHTTP(rw, r)
 
-		route := r.URL.Path
+		route := r.Pattern
 		method := r.Method
 		code := fmt.Sprintf("%d", rw.status)
 

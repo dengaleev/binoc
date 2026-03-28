@@ -5,10 +5,10 @@ global:
 remote_write: []
 
 scrape_configs:
-  - job_name: echo
+  - job_name: binoc
     metrics_path: /metrics
     static_configs:
-      - targets: ["echo:8080"]
+      - targets: ["app:8080"]
 
   - job_name: prometheus
     static_configs:

@@ -12,8 +12,8 @@ down: ## Stop the stack and remove volumes
 logs: ## Tail logs from all services
 	$(COMPOSE) logs -f
 
-build: ## Build the echo service image
-	$(COMPOSE) build echo
+build: ## Build the service image
+	$(COMPOSE) build app
 
 list: ## List available stacks
 	@ls -1 stacks/

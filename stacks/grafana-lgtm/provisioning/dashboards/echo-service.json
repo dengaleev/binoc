@@ -14,7 +14,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(echo_requests_total[5m])) by (method, route)",
+          "expr": "sum(rate(binoc_requests_total[5m])) by (method, route)",
           "legendFormat": "{{method}} {{route}}"
         }
       ],
@@ -36,15 +36,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(echo_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(binoc_request_duration_seconds_bucket[5m])) by (le))",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(echo_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(binoc_request_duration_seconds_bucket[5m])) by (le))",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(echo_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(binoc_request_duration_seconds_bucket[5m])) by (le))",
           "legendFormat": "p99"
         }
       ],
@@ -66,7 +66,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(echo_requests_total{code=~\"5..\"}[5m])) / sum(rate(echo_requests_total[5m]))",
+          "expr": "sum(rate(binoc_requests_total{code=~\"5..\"}[5m])) / sum(rate(binoc_requests_total[5m]))",
           "legendFormat": "error rate"
         }
       ],
@@ -90,7 +90,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "echo_in_flight_requests",
+          "expr": "binoc_in_flight_requests",
           "legendFormat": "in-flight"
         }
       ],
@@ -112,7 +112,7 @@
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=\"echo\"} [1m]))",
+          "expr": "sum(count_over_time({service_name=\"binoc\"} [1m]))",
           "legendFormat": "log lines / min"
         }
       ],
@@ -129,10 +129,10 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["echo", "observability"],
+  "tags": ["binoc", "observability"],
   "templating": { "list": [] },
   "time": { "from": "now-30m", "to": "now" },
-  "title": "Echo Service",
-  "uid": "echo-service",
+  "title": "Binoc Service",
+  "uid": "binoc-service",
   "version": 1
 }

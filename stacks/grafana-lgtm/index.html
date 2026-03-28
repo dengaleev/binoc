@@ -10,6 +10,8 @@
   .container { max-width: 480px; width: 100%; padding: 2rem; }
   h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: .25rem; }
   p { color: #8b949e; font-size: .875rem; margin-bottom: 2rem; }
+  h2 { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #8b949e; margin-bottom: .5rem; margin-top: 1.5rem; }
+  h2:first-of-type { margin-top: 0; }
   nav { display: flex; flex-direction: column; gap: .5rem; }
   a { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1rem; border-radius: 8px; background: #161b22; border: 1px solid #30363d; color: #e1e4e8; text-decoration: none; font-size: .875rem; transition: border-color .15s; }
   a:hover { border-color: #58a6ff; }
@@ -21,9 +23,14 @@
 <div class="container">
   <h1>binoc</h1>
   <p>observability playground</p>
+  <h2>Endpoints</h2>
   <nav>
-    <a href="/echo?msg=hello"><span class="label">Echo Service</span><span class="port">:80/echo</span></a>
-    <a href="/notes"><span class="label">Notes API</span><span class="port">:80/notes</span></a>
+    <a href="/echo?msg=hello"><span class="label">Echo</span><span class="port">/echo</span></a>
+    <a href="/notes"><span class="label">Notes API</span><span class="port">/notes</span></a>
+    <a href="/chain?msg=hello"><span class="label">Chain</span><span class="port">/chain</span></a>
+  </nav>
+  <h2>Monitoring</h2>
+  <nav>
     <a href="http://localhost:3000"><span class="label">Grafana</span><span class="port">:3000</span></a>
     <a href="http://localhost:9090"><span class="label">Prometheus</span><span class="port">:9090</span></a>
     <a href="http://localhost:3100/ready"><span class="label">Loki</span><span class="port">:3100</span></a>

@@ -18,11 +18,13 @@ type Option func(*Server)
 
 // Server wraps an http.ServeMux with instrumentation.
 type Server struct {
-	mux     *http.ServeMux
-	logger  *slog.Logger
-	metrics *instrument.Metrics
-	tracing bool
-	store   *store.Store
+	mux        *http.ServeMux
+	logger     *slog.Logger
+	metrics    *instrument.Metrics
+	tracing    bool
+	store      *store.Store
+	selfURL    string
+	httpClient *http.Client
 }
 
 // WithLogger sets the server logger.
@@ -43,6 +45,11 @@ func WithTracing() Option {
 // WithStore sets the SQLite store for the notes API.
 func WithStore(st *store.Store) Option {
 	return func(s *Server) { s.store = st }
+}
+
+// WithSelfURL sets the base URL for self-calls (chain endpoint).
+func WithSelfURL(url string) Option {
+	return func(s *Server) { s.selfURL = url }
 }
 
 // New creates a configured Server with all routes registered.
@@ -66,6 +73,11 @@ func New(opts ...Option) *Server {
 		s.mux.HandleFunc("GET /notes", s.handleListNotes)
 		s.mux.HandleFunc("GET /notes/{id}", s.handleGetNote)
 		s.mux.HandleFunc("DELETE /notes/{id}", s.handleDeleteNote)
+	}
+
+	if s.selfURL != "" {
+		s.httpClient = newTracedHTTPClient()
+		s.mux.HandleFunc("GET /chain", s.handleChain)
 	}
 
 	return s

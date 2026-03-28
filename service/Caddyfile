@@ -1,12 +1,32 @@
+{
+	servers {
+		metrics
+	}
+}
+
 :80 {
+	tracing
+
 	handle / {
 		root * /srv
 		file_server
 	}
 	handle /echo* {
-		reverse_proxy echo:8080
+		reverse_proxy app:8080
 	}
 	handle /notes* {
-		reverse_proxy echo:8080
+		reverse_proxy app:8080
+	}
+	handle /chain* {
+		reverse_proxy app:8080
+	}
+	handle /healthz {
+		reverse_proxy app:8080
+	}
+	handle /readyz {
+		reverse_proxy app:8080
+	}
+	handle /metrics {
+		reverse_proxy app:8080
 	}
 }

@@ -64,6 +64,11 @@ func main() {
 		}
 	}
 
+	if cfg.SelfURL != "" {
+		opts = append(opts, server.WithSelfURL(cfg.SelfURL))
+		logger.Info("chain endpoint enabled", "self_url", cfg.SelfURL)
+	}
+
 	if cfg.DBPath != "" {
 		db, err := store.New(ctx, cfg.DBPath)
 		if err != nil {
