@@ -16,9 +16,9 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.116.0
-    command: ["--config=/etc/otelcol/config.yml"]
+    command: ["--config=/etc/otelcol-contrib/config.yml"]
     volumes:
-      - ./otel-collector.yml:/etc/otelcol/config.yml:ro
+      - ./otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
     depends_on:
       - loki
       - tempo
