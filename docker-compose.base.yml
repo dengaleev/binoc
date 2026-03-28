@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   caddy:
-    image: caddy:2.8-alpine
+    image: caddy:2.11.1-alpine
     ports:
       - "80:80"
     volumes:

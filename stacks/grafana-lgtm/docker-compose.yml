@@ -15,7 +15,7 @@ services:
       - ./index.html:/srv/index.html:ro
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.120.0
+    image: otel/opentelemetry-collector-contrib:0.148.0
     command: ["--config=/etc/otelcol-contrib/config.yml"]
     volumes:
       - ./otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: prom/prometheus:v3.10.0
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-remote-write-receiver"
@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:3.3.2
+    image: grafana/loki:3.7.1
     command: ["-config.file=/etc/loki/loki.yml"]
     volumes:
       - ./loki.yml:/etc/loki/loki.yml:ro
@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
 
   tempo:
-    image: grafana/tempo:2.6.1
+    image: grafana/tempo:2.10.3
     command: ["-config.file=/etc/tempo/tempo.yml"]
     volumes:
       - ./tempo.yml:/etc/tempo/tempo.yml:ro
@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:12.4.2
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
