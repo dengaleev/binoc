@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>binoc</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .container { max-width: 480px; width: 100%; padding: 2rem; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: .25rem; }
+  p { color: #8b949e; font-size: .875rem; margin-bottom: 2rem; }
+  h2 { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #8b949e; margin-bottom: .5rem; margin-top: 1.5rem; }
+  h2:first-of-type { margin-top: 0; }
+  nav { display: flex; flex-direction: column; gap: .5rem; }
+  a { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1rem; border-radius: 8px; background: #161b22; border: 1px solid #30363d; color: #e1e4e8; text-decoration: none; font-size: .875rem; transition: border-color .15s; }
+  a:hover { border-color: #58a6ff; }
+  .label { font-weight: 500; }
+  .port { color: #8b949e; font-size: .75rem; font-family: ui-monospace, monospace; }
+  .note { color: #8b949e; font-size: .75rem; margin-top: .5rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>binoc</h1>
+  <p>observability playground</p>
+  <h2>Endpoints</h2>
+  <nav>
+    <a href="/api/echo?msg=hello"><span class="label">Echo</span><span class="port">/api/echo</span></a>
+    <a href="/api/notes"><span class="label">Notes API</span><span class="port">/api/notes</span></a>
+    <a href="/api/chain?msg=hello"><span class="label">Chain</span><span class="port">/api/chain</span></a>
+    <a href="/api/random"><span class="label">Random</span><span class="port">/api/random</span></a>
+  </nav>
+  <h2>Monitoring</h2>
+  <nav>
+    <a href="http://localhost:8888"><span class="label">SigNoz</span><span class="port">:8888</span></a>
+  </nav>
+  <p class="note">Login: admin@localhost / admin123</p>
+</div>
+</body>
+</html>

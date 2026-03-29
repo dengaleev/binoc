@@ -1,0 +1,141 @@
+include:
+  - path: ../../docker-compose.base.yml
+
+services:
+  app:
+    environment:
+      METRICS_ENABLED: "true"
+      TRACING_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  caddy:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "caddy"
+    volumes:
+      - ./index.html:/srv/index.html:ro
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.148.0
+    command: ["--config=/etc/otelcol-contrib/config.yml"]
+    volumes:
+      - ./otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
+    depends_on:
+      signoz-otel-collector:
+        condition: service_started
+    restart: unless-stopped
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:v0.144.2
+    command:
+      - "--config=/etc/otel-collector-config.yaml"
+    volumes:
+      - ./signoz-otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    environment:
+      OTEL_RESOURCE_ATTRIBUTES: "host.name=signoz-host,os.type=linux"
+      LOW_CARDINAL_EXCEPTION_GROUPING: "false"
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
+    depends_on:
+      signoz-telemetrystore-migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  signoz-telemetrystore-migrator:
+    image: signoz/signoz-otel-collector:v0.144.2
+    command:
+      - sh
+      - -c
+      - |
+        /signoz-otel-collector migrate bootstrap &&
+        /signoz-otel-collector migrate sync up &&
+        /signoz-otel-collector migrate async up
+    environment:
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER: "cluster"
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION: "true"
+      SIGNOZ_OTEL_COLLECTOR_TIMEOUT: "10m"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: on-failure
+
+  signoz:
+    image: signoz/signoz:v0.117.1
+    environment:
+      SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
+      SIGNOZ_SQLSTORE_SQLITE_PATH: "/var/lib/signoz/signoz.db"
+      SIGNOZ_USER_ROOT_ENABLED: "true"
+      SIGNOZ_USER_ROOT_EMAIL: "admin@localhost"
+      SIGNOZ_USER_ROOT_PASSWORD: "admin123"
+      SIGNOZ_USER_ROOT_ORG_NAME: "default"
+    volumes:
+      - signoz-sqlite:/var/lib/signoz
+    ports:
+      - "8888:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      signoz-telemetrystore-migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.5.6
+    environment:
+      CLICKHOUSE_DB: ""
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/signoz.xml:ro
+      - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/signoz-users.xml:ro
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    restart: unless-stopped
+
+  zookeeper:
+    image: signoz/zookeeper:3.7.1
+    environment:
+      ZOO_SERVER_ID: "1"
+      ZOO_SERVERS: "0.0.0.0:2888:3888"
+      ZOO_ENABLE_PROMETHEUS_METRICS: "yes"
+      ZOO_PROMETHEUS_METRICS_PORT_NUMBER: "9141"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/commands/ruok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  clickhouse-data:
+  zookeeper-data:
+  zookeeper-log:
+  signoz-sqlite:

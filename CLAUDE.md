@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 make up                                # build and start default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # explicit stack selection
 make up STACK=clickstack              # ClickHouse + HyperDX
+make up STACK=signoz                  # SigNoz + ClickHouse
 make down                     # stop and remove volumes
 make logs                     # tail all service logs
 ```
