@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   clickstack:
-    image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one
+    image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one:2.22.1
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - mongo-data:/data/db
