@@ -69,9 +69,9 @@ func otelMiddleware(next http.Handler) http.Handler {
 }
 
 // isInternalPath reports whether a path should be excluded from
-// tracing and logging (health probes, metrics scrapes).
+// tracing and logging (metrics scrapes).
 func isInternalPath(path string) bool {
-	return path == "/metrics" || path == "/healthz"
+	return path == "/metrics"
 }
 
 func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,12 +17,6 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		cfg := config.Load()
-		runHealthcheck(cfg.Addr)
-		return
-	}
-
 	cfg := config.Load()
 	logger := instrument.SetupLogger(cfg.LogFormat, cfg.LogLevel)
 
@@ -39,7 +32,7 @@ func main() {
 	}
 
 	if cfg.TracingEnabled {
-		_, shutdown, err := instrument.SetupTracing(ctx, cfg.OTELExporterEndpoint, cfg.ServiceName)
+		_, shutdown, err := instrument.SetupTracing(ctx)
 		if err != nil {
 			logger.Error("failed to setup tracing", "error", err)
 			os.Exit(1)
@@ -52,9 +45,9 @@ func main() {
 			}
 		}()
 		opts = append(opts, server.WithTracing())
-		logger.Info("tracing enabled", "endpoint", cfg.OTELExporterEndpoint)
+		logger.Info("tracing enabled")
 
-		otelHandler, logShutdown, err := instrument.SetupOTELLogging(ctx, cfg.OTELExporterEndpoint, cfg.ServiceName)
+		otelHandler, logShutdown, err := instrument.SetupOTELLogging(ctx)
 		if err != nil {
 			logger.Error("failed to setup OTLP logging", "error", err)
 		} else {
@@ -111,18 +104,5 @@ func main() {
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
-	}
-}
-
-func runHealthcheck(addr string) {
-	resp, err := http.Get(fmt.Sprintf("http://localhost%s/healthz", addr))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		fmt.Fprintf(os.Stderr, "healthcheck failed: status %d\n", resp.StatusCode)
-		os.Exit(1)
 	}
 }

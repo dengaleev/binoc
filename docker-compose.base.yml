@@ -15,14 +15,8 @@ services:
       ADDR: ":8080"
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
-      SERVICE_NAME: "binoc"
+      OTEL_SERVICE_NAME: "binoc"
       SELF_URL: "http://caddy:80"
-    healthcheck:
-      test: ["CMD", "/binoc", "healthcheck"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
     restart: unless-stopped
     read_only: true
 
@@ -39,6 +33,5 @@ services:
       retries: 3
       start_period: 5s
     depends_on:
-      app:
-        condition: service_healthy
+      - app
     restart: unless-stopped

@@ -12,11 +12,9 @@ import (
 	"go.opentelemetry.io/otel/log/global"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// SetupLogger configures slog with both a local handler (stdout) and an
-// optional OTLP handler that ships logs to the collector.
+// SetupLogger configures slog with a local handler writing to stdout.
 func SetupLogger(format, level string) *slog.Logger {
 	lvl := parseLevel(level)
 	opts := &slog.HandlerOptions{Level: lvl}
@@ -35,11 +33,10 @@ func SetupLogger(format, level string) *slog.Logger {
 }
 
 // SetupOTELLogging initialises the OTEL LoggerProvider with an OTLP gRPC
-// exporter and returns a slog handler that bridges to it. Call the returned
-// shutdown function on exit.
-func SetupOTELLogging(ctx context.Context, endpoint, serviceName string) (slog.Handler, func(context.Context) error, error) {
+// exporter and returns a slog handler that bridges to it. Endpoint and service
+// name are read from standard OTEL env vars.
+func SetupOTELLogging(ctx context.Context) (slog.Handler, func(context.Context) error, error) {
 	exporter, err := otlploggrpc.New(ctx,
-		otlploggrpc.WithEndpoint(endpoint),
 		otlploggrpc.WithInsecure(),
 	)
 	if err != nil {
@@ -47,7 +44,7 @@ func SetupOTELLogging(ctx context.Context, endpoint, serviceName string) (slog.H
 	}
 
 	res, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceName(serviceName)),
+		resource.WithFromEnv(),
 		resource.WithTelemetrySDK(),
 	)
 	if err != nil {
@@ -60,7 +57,7 @@ func SetupOTELLogging(ctx context.Context, endpoint, serviceName string) (slog.H
 	)
 	global.SetLoggerProvider(provider)
 
-	handler := otelslog.NewHandler(serviceName, otelslog.WithLoggerProvider(provider))
+	handler := otelslog.NewHandler("binoc", otelslog.WithLoggerProvider(provider))
 	return handler, provider.Shutdown, nil
 }
 

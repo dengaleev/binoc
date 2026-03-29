@@ -66,7 +66,6 @@ func New(opts ...Option) *Server {
 
 	s.mux.HandleFunc("GET /echo", s.handleGetEcho)
 	s.mux.HandleFunc("POST /echo", s.handlePostEcho)
-	s.mux.HandleFunc("GET /healthz", handleHealthz)
 	s.mux.Handle("GET /metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{EnableOpenMetrics: true},
