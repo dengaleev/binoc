@@ -53,19 +53,6 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 | `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus, with OTel Collector |
 | `clickstack` | HyperDX + ClickHouse (all-in-one), with OTel Collector |
 
-### Image versions
-
-| Stack | Image | Version |
-|-------|-------|---------|
-| shared | `caddy` | `2.11.1-alpine` |
-| `loki-tempo-prometheus` | `otel/opentelemetry-collector-contrib` | `0.148.0` |
-| | `prom/prometheus` | `v3.10.0` |
-| | `grafana/loki` | `3.7.1` |
-| | `grafana/tempo` | `2.10.3` |
-| | `grafana/grafana` | `12.4.2` |
-| `clickstack` | `docker.hyperdx.io/hyperdx/hyperdx-all-in-one` | `2.22.1` |
-| | `otel/opentelemetry-collector-contrib` | `0.148.0` |
-
 ## Adding a Stack
 
 Each stack in `stacks/<name>/` needs:
@@ -74,6 +61,7 @@ Each stack in `stacks/<name>/` needs:
 - [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on app service with `http://` scheme
 - [ ] Backend configs — one per signal (metrics, logs, traces)
 - [ ] `index.html` — landing page with endpoint links (`/api/` prefix) and tool links
+- [ ] All images pinned to exact version tags — no `latest`, no floating tags
 
 ## Make Targets
 
