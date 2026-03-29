@@ -22,23 +22,12 @@ services:
         condition: service_started
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.148.0
-    command: ["--config=/etc/otelcol-contrib/config.yml"]
-    volumes:
-      - ./otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
-    depends_on:
-      signoz-otel-collector:
-        condition: service_started
-    restart: unless-stopped
-
-  signoz-otel-collector:
     image: signoz/signoz-otel-collector:v0.144.2
     command:
       - "--config=/etc/otel-collector-config.yaml"
     volumes:
-      - ./signoz-otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./otel-collector.yml:/etc/otel-collector-config.yaml:ro
     environment:
-      OTEL_RESOURCE_ATTRIBUTES: "host.name=signoz-host,os.type=linux"
       LOW_CARDINAL_EXCEPTION_GROUPING: "false"
       SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
     depends_on:
@@ -111,12 +100,13 @@ services:
     restart: unless-stopped
 
   clickhouse-keeper:
-    image: clickhouse/clickhouse-keeper:25.5.6-alpine
+    image: clickhouse/clickhouse-keeper:26.3.2.3-alpine
+    hostname: clickhouse-keeper
     volumes:
       - keeper-data:/var/lib/clickhouse-keeper
       - ./keeper-config.xml:/etc/clickhouse-keeper/keeper_config.xml:ro
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 9181 | grep imok"]
+      test: ["CMD", "bash", "-c", "echo ruok | nc -w 1 localhost 9181 | grep imok"]
       interval: 10s
       timeout: 5s
       retries: 5
