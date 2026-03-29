@@ -14,3 +14,8 @@ scrape_configs:
     scrape_protocols: ["OpenMetricsText1.0.0", "PrometheusText0.0.4"]
     static_configs:
       - targets: ["app:8080"]
+
+  - job_name: caddy
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["caddy:2019"]
