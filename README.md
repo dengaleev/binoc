@@ -28,7 +28,8 @@ Observability playground — a minimal Go service paired with different monitori
 ```bash
 make up                                # starts the default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # or pick one explicitly
-make list                     # show available stacks
+make up STACK=clickstack              # ClickHouse + HyperDX
+make list                             # show available stacks
 ```
 
 Open http://localhost to see the navigation page with links to all endpoints and tools.
@@ -53,8 +54,8 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 
 | Stack | Description |
 |-------|-------------|
-| `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus, with OTel Collector |
-| `clickstack` | HyperDX + ClickHouse (all-in-one), with OTel Collector |
+| `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus — separate backend per signal |
+| `clickstack` | HyperDX + ClickHouse — unified backend for all signals |
 
 ## Adding a Stack
 

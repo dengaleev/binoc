@@ -2,16 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this is
-
-Observability playground — a minimal Go service paired with interchangeable monitoring stacks. The service produces traces, logs, and metrics; each stack collects and visualizes them.
-
 ## Build and run
 
 ```bash
 make up                                # build and start default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # explicit stack selection
-make up STACK=clickstack              # ClickHouse unified backend
+make up STACK=clickstack              # ClickHouse + HyperDX
 make down                     # stop and remove volumes
 make logs                     # tail all service logs
 ```
@@ -62,13 +58,9 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 
 ## Stack principles
 
-See `README.md` for the full list. Key rules for adding or modifying stacks:
+See the **Stack** section under **Principles** in `README.md` — that is the source of truth. Do not duplicate the list here.
 
-- Simplest ingestion path — prefer the approach with least configuration, not the most optimal
-- Single telemetry gateway — app sends OTLP to one service, that service routes to backends and scrapes Prometheus metrics
-- No auth — UIs must be accessible without login, registration, or API keys
-- Pinned image tags — all images use exact version tags, no `latest`
-- Use the `/add-stack <name>` agent to scaffold new stacks
+Use the `/add-stack <name> <description>` agent to scaffold new stacks.
 
 ## Proxy environment
 
