@@ -17,6 +17,17 @@ make logs                     # tail all service logs
 
 The compose setup uses `docker-compose.base.yml` (app + Caddy) included by each stack's own `docker-compose.yml`.
 
+## After changing Go code
+
+Run from `service/`:
+
+```bash
+gofmt -w .
+go vet ./...
+go build ./...
+go mod tidy
+```
+
 ## Architecture
 
 ```
@@ -45,11 +56,18 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 - Distroless container, read-only filesystem
 - No tests (playground project)
 
-## Building behind a proxy
+## Proxy environment
 
-When Docker builds run behind a TLS-inspecting proxy (e.g. Claude Code web sandbox), three things need configuring:
+When running behind a TLS-inspecting proxy (e.g. Claude Code web sandbox), check `$HTTP_PROXY` and `$no_proxy`. If `*.googleapis.com` or `*.google.com` are in `no_proxy`, remove them so traffic routes through the proxy — otherwise Go toolchain downloads and Docker pulls will fail.
 
-**1. Docker daemon** — set registry mirror and proxy in `/etc/docker/daemon.json`:
+**Go toolchain** — override `no_proxy` per command if needed:
+
+```bash
+no_proxy=localhost,127.0.0.1 go mod tidy
+```
+
+**Docker daemon** — set proxy and registry mirror in `/etc/docker/daemon.json`:
+
 ```json
 {
   "proxies": {
@@ -60,9 +78,11 @@ When Docker builds run behind a TLS-inspecting proxy (e.g. Claude Code web sandb
   "registry-mirrors": ["https://mirror.gcr.io"]
 }
 ```
+
 Restart dockerd after changes.
 
-**2. Build args** — pass proxy vars so `go mod download` works inside the build:
+**Docker build args** — pass proxy vars so `go mod download` works inside the build:
+
 ```yaml
 # docker-compose.base.yml → services.app.build.args
 args:
@@ -71,7 +91,8 @@ args:
   - NO_PROXY=localhost,127.0.0.1
 ```
 
-**3. Proxy CA certificate** — if the proxy does TLS inspection, place the CA cert at `service/proxy-ca.crt` and add to Dockerfile before `go mod download`:
+**Proxy CA certificate** — if the proxy does TLS inspection, place the CA cert at `service/proxy-ca.crt` and add to Dockerfile before `go mod download`:
+
 ```dockerfile
 ARG HTTP_PROXY HTTPS_PROXY NO_PROXY
 
