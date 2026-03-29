@@ -1,0 +1,33 @@
+# Shared services: the app and its reverse proxy.
+# Each stack's docker-compose.yml extends this via `include`.
+# Stack-specific env vars (OTEL endpoint, feature flags) belong in the stack compose.
+
+services:
+  app:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    environment:
+      ADDR: ":8080"
+      LOG_FORMAT: "json"
+      LOG_LEVEL: "info"
+      OTEL_SERVICE_NAME: "binoc"
+      SELF_URL: "http://caddy:80"
+    restart: unless-stopped
+    read_only: true
+
+  caddy:
+    image: caddy:2.11.1-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./service/Caddyfile:/etc/caddy/Caddyfile:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      - app
+    restart: unless-stopped
