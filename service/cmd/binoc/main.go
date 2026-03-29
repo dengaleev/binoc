@@ -75,16 +75,13 @@ func main() {
 		logger.Info("chain endpoint enabled", "self_url", cfg.SelfURL)
 	}
 
-	if cfg.DBPath != "" {
-		db, err := store.New(ctx, cfg.DBPath)
-		if err != nil {
-			logger.Error("failed to open database", "error", err)
-			os.Exit(1)
-		}
-		defer db.Close()
-		opts = append(opts, server.WithStore(db))
-		logger.Info("notes API enabled", "db", cfg.DBPath)
+	db, err := store.New(ctx)
+	if err != nil {
+		logger.Error("failed to open database", "error", err)
+		os.Exit(1)
 	}
+	defer db.Close()
+	opts = append(opts, server.WithStore(db))
 
 	opts = append(opts, server.WithLogger(logger))
 	srv := server.New(opts...)

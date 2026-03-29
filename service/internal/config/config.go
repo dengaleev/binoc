@@ -15,7 +15,6 @@ type Config struct {
 	TracingEnabled       bool   `env:"TRACING_ENABLED"               envDefault:"true"`
 	OTELExporterEndpoint string `env:"OTEL_EXPORTER_OTLP_ENDPOINT"   envDefault:"localhost:4317"`
 	ServiceName          string `env:"SERVICE_NAME"                  envDefault:"binoc"`
-	DBPath               string `env:"DB_PATH"                       envDefault:""`
 	SelfURL              string `env:"SELF_URL"                      envDefault:""`
 }
 

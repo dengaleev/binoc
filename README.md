@@ -25,10 +25,7 @@ A single Go binary (`service/`) that exposes several HTTP endpoints behind a Cad
 |--------|------|---------|
 | `GET` | `/echo?msg=hello` | Returns the message as JSON. Simple request/response for basic traces. |
 | `POST` | `/echo` | Echoes the request body back. |
-| `GET` | `/notes` | List all notes. Produces DB query spans via `otelsql`. |
-| `POST` | `/notes` | Create a note (`{"title":"…","content":"…"}`). DB insert span. |
-| `GET` | `/notes/{id}` | Get a note by ID. |
-| `DELETE` | `/notes/{id}` | Delete a note by ID. |
+| `GET` | `/notes` | List notes from in-memory SQLite (seeded on startup). Produces DB query spans via `otelsql`. |
 | `GET` | `/chain?msg=hello` | Calls `/echo` through Caddy, producing a distributed trace: Caddy → app → Caddy → app. |
 | `GET` | `/healthz` | Liveness probe. |
 | `GET` | `/readyz` | Readiness probe. |
@@ -37,7 +34,7 @@ A single Go binary (`service/`) that exposes several HTTP endpoints behind a Cad
 ### Why these routes exist
 
 - **`/echo`** — minimal endpoint for baseline traces and metrics
-- **`/notes`** — adds database spans (`sql.conn.exec`, `sql.conn.query`) so traces have depth
+- **`/notes`** — adds database query spans (`sql.conn.query`) so traces have depth
 - **`/chain`** — creates multi-service distributed traces with trace context propagation across HTTP boundaries (app → Caddy → app)
 
 ### Instrumentation

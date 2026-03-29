@@ -73,10 +73,7 @@ func New(opts ...Option) *Server {
 	))
 
 	if s.store != nil {
-		s.mux.HandleFunc("POST /notes", s.handleCreateNote)
 		s.mux.HandleFunc("GET /notes", s.handleListNotes)
-		s.mux.HandleFunc("GET /notes/{id}", s.handleGetNote)
-		s.mux.HandleFunc("DELETE /notes/{id}", s.handleDeleteNote)
 	}
 
 	if s.selfURL != "" {

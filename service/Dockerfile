@@ -12,12 +12,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /binoc ./cmd/binoc
-RUN mkdir /data-dir
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
 COPY --from=build /binoc /binoc
-COPY --from=build --chown=nonroot:nonroot /data-dir /data
 USER nonroot:nonroot
 
 ENTRYPOINT ["/binoc"]

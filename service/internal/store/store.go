@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/XSAM/otelsql"
@@ -25,9 +26,10 @@ type Store struct {
 	db *sql.DB
 }
 
-// New opens a SQLite database with automatic OTel tracing and creates the schema.
-func New(ctx context.Context, dsn string) (*Store, error) {
-	db, err := otelsql.Open("sqlite", dsn,
+// New opens an in-memory SQLite database with OTel tracing, creates the
+// schema, and seeds it with sample data.
+func New(ctx context.Context) (*Store, error) {
+	db, err := otelsql.Open("sqlite", ":memory:",
 		otelsql.WithAttributes(semconv.DBSystemSqlite),
 		otelsql.WithSpanOptions(otelsql.SpanOptions{
 			DisableErrSkip: true,
@@ -37,7 +39,6 @@ func New(ctx context.Context, dsn string) (*Store, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
-	// Basic connection settings for SQLite.
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 
@@ -48,6 +49,10 @@ func New(ctx context.Context, dsn string) (*Store, error) {
 
 	s := &Store{db: db}
 	if err := s.migrate(ctx); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := s.seed(ctx); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -63,48 +68,6 @@ func (s *Store) Ping(ctx context.Context) error {
 // Close closes the database connection.
 func (s *Store) Close() error {
 	return s.db.Close()
-}
-
-func (s *Store) migrate(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `
-		CREATE TABLE IF NOT EXISTS notes (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			title      TEXT NOT NULL,
-			content    TEXT NOT NULL DEFAULT '',
-			created_at TEXT NOT NULL
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("running migration: %w", err)
-	}
-	return nil
-}
-
-// Create inserts a new note and returns it with its generated ID.
-func (s *Store) Create(ctx context.Context, title, content string) (Note, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
-	result, err := s.db.ExecContext(ctx,
-		`INSERT INTO notes (title, content, created_at) VALUES (?, ?, ?)`,
-		title, content, now,
-	)
-	if err != nil {
-		return Note{}, fmt.Errorf("inserting note: %w", err)
-	}
-
-	id, _ := result.LastInsertId()
-	return Note{ID: id, Title: title, Content: content, CreatedAt: now}, nil
-}
-
-// Get retrieves a note by ID.
-func (s *Store) Get(ctx context.Context, id int64) (Note, error) {
-	var n Note
-	err := s.db.QueryRowContext(ctx,
-		`SELECT id, title, content, created_at FROM notes WHERE id = ?`, id,
-	).Scan(&n.ID, &n.Title, &n.Content, &n.CreatedAt)
-	if err != nil {
-		return Note{}, err
-	}
-	return n, nil
 }
 
 // List returns all notes ordered by creation time descending.
@@ -128,13 +91,48 @@ func (s *Store) List(ctx context.Context) ([]Note, error) {
 	return notes, nil
 }
 
-// Delete removes a note by ID. Returns true if a row was deleted.
-func (s *Store) Delete(ctx context.Context, id int64) (bool, error) {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM notes WHERE id = ?`, id)
+func (s *Store) migrate(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS notes (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			title      TEXT NOT NULL,
+			content    TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL
+		)
+	`)
 	if err != nil {
-		return false, fmt.Errorf("deleting note: %w", err)
+		return fmt.Errorf("running migration: %w", err)
 	}
+	return nil
+}
 
-	n, _ := result.RowsAffected()
-	return n > 0, nil
+var sampleNotes = []struct{ title, content string }{
+	{"Deploy v2.3.1", "Rolled out new caching layer to production"},
+	{"Incident #847", "Latency spike caused by connection pool exhaustion"},
+	{"Sprint retro", "Improve alerting thresholds for p99 latency"},
+	{"DB migration plan", "Add index on created_at for the events table"},
+	{"Load test results", "Sustained 12k rps with p95 under 50ms"},
+	{"On-call handoff", "Watch the memory usage on worker-3, trending up"},
+	{"Feature flag cleanup", "Remove stale flags from Q3 experiment"},
+	{"Cert rotation", "TLS certs expire in 14 days, auto-renew configured"},
+	{"Capacity review", "Current headroom at 40%, plan expansion for Q2"},
+	{"Runbook update", "Added steps for OTel collector restart procedure"},
+}
+
+func (s *Store) seed(ctx context.Context) error {
+	n := 3 + rand.IntN(len(sampleNotes)-3)
+	base := time.Now().UTC().Add(-time.Duration(n) * time.Hour)
+
+	for i := range n {
+		sample := sampleNotes[i]
+		ts := base.Add(time.Duration(i) * time.Hour).Format(time.RFC3339)
+		_, err := s.db.ExecContext(ctx,
+			`INSERT INTO notes (title, content, created_at) VALUES (?, ?, ?)`,
+			sample.title, sample.content, ts,
+		)
+		if err != nil {
+			return fmt.Errorf("seeding note: %w", err)
+		}
+	}
+	return nil
 }
