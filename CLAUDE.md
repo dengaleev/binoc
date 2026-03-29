@@ -11,6 +11,7 @@ Observability playground — a minimal Go service paired with interchangeable mo
 ```bash
 make up                                # build and start default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # explicit stack selection
+make up STACK=clickstack              # ClickHouse unified backend
 make down                     # stop and remove volumes
 make logs                     # tail all service logs
 ```

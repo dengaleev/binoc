@@ -51,6 +51,7 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 | Stack | Description |
 |-------|-------------|
 | `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus, with OTel Collector |
+| `clickstack` | HyperDX + ClickHouse (all-in-one), with OTel Collector |
 
 ## Adding a Stack
 

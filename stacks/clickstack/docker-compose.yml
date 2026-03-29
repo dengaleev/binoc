@@ -1,0 +1,51 @@
+include:
+  - path: ../../docker-compose.base.yml
+
+services:
+  app:
+    environment:
+      METRICS_ENABLED: "true"
+      TRACING_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  caddy:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "caddy"
+    volumes:
+      - ./index.html:/srv/index.html:ro
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.148.0
+    command: ["--config=/etc/otelcol-contrib/config.yml"]
+    volumes:
+      - ./otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
+    depends_on:
+      clickstack:
+        condition: service_healthy
+    restart: unless-stopped
+
+  clickstack:
+    image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - mongo-data:/data/db
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  clickhouse-data:
+  mongo-data:
