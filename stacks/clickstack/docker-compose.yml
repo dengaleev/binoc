@@ -33,10 +33,12 @@ services:
 
   clickstack:
     image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one:2.22.1
+    entrypoint: ["sh", "/etc/clickstack/entry.sh"]
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - mongo-data:/data/db
       - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/default-user.xml:ro
+      - ./entry.sh:/etc/clickstack/entry.sh:ro
     ports:
       - "8080:8080"
     healthcheck:
