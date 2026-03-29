@@ -30,6 +30,9 @@ service/binoc
 # env file
 .env
 
+# Environment-specific proxy CA
+proxy-ca.crt
+
 # Editor/IDE
 # .idea/
 # .vscode/
