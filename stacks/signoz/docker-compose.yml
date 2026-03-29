@@ -48,10 +48,9 @@ services:
 
   signoz-telemetrystore-migrator:
     image: signoz/signoz-otel-collector:v0.144.2
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - sh
-      - -c
-      - |
+      - >
         /signoz-otel-collector migrate bootstrap &&
         /signoz-otel-collector migrate sync up &&
         /signoz-otel-collector migrate async up
@@ -71,8 +70,8 @@ services:
       SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
       SIGNOZ_SQLSTORE_SQLITE_PATH: "/var/lib/signoz/signoz.db"
       SIGNOZ_USER_ROOT_ENABLED: "true"
-      SIGNOZ_USER_ROOT_EMAIL: "admin@localhost"
-      SIGNOZ_USER_ROOT_PASSWORD: "admin123"
+      SIGNOZ_USER_ROOT_EMAIL: "admin@example.com"
+      SIGNOZ_USER_ROOT_PASSWORD: "Admin@Signoz1!"
       SIGNOZ_USER_ROOT_ORG_NAME: "default"
     volumes:
       - signoz-sqlite:/var/lib/signoz
@@ -100,11 +99,6 @@ services:
       - clickhouse-data:/var/lib/clickhouse
       - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/signoz.xml:ro
       - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/signoz-users.xml:ro
-    ulimits:
-      nproc: 65535
-      nofile:
-        soft: 262144
-        hard: 262144
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
       interval: 10s
@@ -123,6 +117,7 @@ services:
       ZOO_SERVERS: "0.0.0.0:2888:3888"
       ZOO_ENABLE_PROMETHEUS_METRICS: "yes"
       ZOO_PROMETHEUS_METRICS_PORT_NUMBER: "9141"
+      ALLOW_ANONYMOUS_LOGIN: "yes"
     volumes:
       - zookeeper-data:/var/lib/zookeeper/data
       - zookeeper-log:/var/lib/zookeeper/log
