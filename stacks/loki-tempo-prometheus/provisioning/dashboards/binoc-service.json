@@ -134,16 +134,8 @@
       "datasource": { "type": "tempo", "uid": "tempo" },
       "targets": [
         {
-          "queryType": "traceqlSearch",
-          "filters": [
-            {
-              "id": "service-name",
-              "tag": "service.name",
-              "operator": "=",
-              "value": ["binoc"],
-              "scope": "resource"
-            }
-          ],
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"binoc\"}",
           "limit": 20
         }
       ],
