@@ -100,6 +100,8 @@ func main() {
 		}
 	}()
 
+	srv.Start(ctx)
+
 	<-ctx.Done()
 	logger.Info("shutting down")
 

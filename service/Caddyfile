@@ -20,6 +20,15 @@
 		root * /srv
 		file_server
 	}
+	handle /time {
+		root * /srv
+		templates {
+			mime application/json
+		}
+		header Content-Type application/json
+		rewrite * /time.json.tmpl
+		file_server
+	}
 	handle /echo* {
 		reverse_proxy app:8080
 	}
@@ -27,6 +36,9 @@
 		reverse_proxy app:8080
 	}
 	handle /chain* {
+		reverse_proxy app:8080
+	}
+	handle /random* {
 		reverse_proxy app:8080
 	}
 }

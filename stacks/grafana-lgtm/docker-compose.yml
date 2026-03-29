@@ -17,6 +17,7 @@ services:
       OTEL_SERVICE_NAME: "caddy"
     volumes:
       - ./index.html:/srv/index.html:ro
+      - ./time.json.tmpl:/srv/time.json.tmpl:ro
     depends_on:
       otel-collector:
         condition: service_started

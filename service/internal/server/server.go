@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -72,6 +73,8 @@ func New(opts ...Option) *Server {
 		promhttp.HandlerOpts{EnableOpenMetrics: true},
 	))
 
+	s.mux.HandleFunc("GET /random", s.handleRandom)
+
 	if s.store != nil {
 		s.mux.HandleFunc("GET /notes", s.handleListNotes)
 	}
@@ -82,6 +85,13 @@ func New(opts ...Option) *Server {
 	}
 
 	return s
+}
+
+// Start launches background workers. Call this after the server is listening.
+func (s *Server) Start(ctx context.Context) {
+	if s.selfURL != "" && s.httpClient != nil {
+		s.startTicker(ctx)
+	}
 }
 
 // Handler returns the fully wrapped handler with middleware applied.

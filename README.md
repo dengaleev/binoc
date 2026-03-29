@@ -27,6 +27,8 @@ A single Go binary (`service/`) that exposes several HTTP endpoints behind a Cad
 | `POST` | `/echo` | Echoes the request body back. |
 | `GET` | `/notes` | List notes from in-memory SQLite (seeded on startup). Produces DB query spans via `otelsql`. |
 | `GET` | `/chain?msg=hello` | Calls `/echo` through Caddy, producing a distributed trace: Caddy → app → Caddy → app. |
+| `GET` | `/random` | Random 0-500ms delay, ~10% error rate. Makes latency and error panels interesting. |
+| `GET` | `/time` | Returns current time (served directly by Caddy, not proxied to app). |
 | `GET` | `/healthz` | Liveness probe. |
 | `GET` | `/readyz` | Readiness probe. |
 | `GET` | `/metrics` | Prometheus metrics. |
@@ -36,6 +38,8 @@ A single Go binary (`service/`) that exposes several HTTP endpoints behind a Cad
 - **`/echo`** — minimal endpoint for baseline traces and metrics
 - **`/notes`** — adds database query spans (`sql.conn.query`) so traces have depth
 - **`/chain`** — creates multi-service distributed traces with trace context propagation across HTTP boundaries (app → Caddy → app)
+- **`/random`** — generates realistic latency spread and error rate so dashboard panels aren't flat
+- **`/time`** — Caddy-only handler; polled by a background ticker in the app every 1s to produce continuous background traces and logs
 
 ### Instrumentation
 
