@@ -59,40 +59,41 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 
 ## Proxy environment
 
-When running behind a TLS-inspecting proxy (e.g. Claude Code web sandbox), check `$HTTP_PROXY` and `$no_proxy`. If `*.googleapis.com` or `*.google.com` are in `no_proxy`, remove them so traffic routes through the proxy — otherwise Go toolchain downloads and Docker pulls will fail.
+Skip this section if `$HTTP_PROXY` is empty. When running behind a TLS-inspecting proxy (e.g. Claude Code web sandbox), all four steps below are required.
 
-**Go toolchain** — override `no_proxy` per command if needed:
+**1. Fix `no_proxy`** — if `*.googleapis.com` or `*.google.com` are listed in `$no_proxy`, remove them so traffic routes through the proxy. Without this, Go toolchain downloads and Docker image pulls fail with timeouts.
+
+**2. Go toolchain** — override per command or export in shell:
 
 ```bash
 no_proxy=localhost,127.0.0.1 go mod tidy
 ```
 
-**Docker daemon** — set proxy and registry mirror in `/etc/docker/daemon.json`:
+**3. Docker daemon** — create `/etc/docker/daemon.json` with proxy and registry mirror, then restart dockerd. Strip `*.googleapis.com` and `*.google.com` from `no-proxy` here too.
 
 ```json
 {
   "proxies": {
     "http-proxy": "$HTTP_PROXY",
     "https-proxy": "$HTTPS_PROXY",
-    "no-proxy": "$NO_PROXY"
+    "no-proxy": "localhost,127.0.0.1"
   },
   "registry-mirrors": ["https://mirror.gcr.io"]
 }
 ```
 
-Restart dockerd after changes.
+**4. Docker build** — the daemon proxy only covers image pulls, not processes inside the build. Pass proxy vars as build args and add the proxy CA cert to the Dockerfile. The proxy does TLS inspection, so without the CA cert `go mod download` fails with `x509: certificate signed by unknown authority`.
 
-**Docker build args** — pass proxy vars so `go mod download` works inside the build:
+Add to `docker-compose.base.yml` → `services.app.build`:
 
 ```yaml
-# docker-compose.base.yml → services.app.build.args
 args:
   - HTTP_PROXY
   - HTTPS_PROXY
   - NO_PROXY=localhost,127.0.0.1
 ```
 
-**Proxy CA certificate** — if the proxy does TLS inspection, place the CA cert at `service/proxy-ca.crt` and add to Dockerfile before `go mod download`:
+Add to `service/Dockerfile` before `go mod download`:
 
 ```dockerfile
 ARG HTTP_PROXY HTTPS_PROXY NO_PROXY
