@@ -40,11 +40,11 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
