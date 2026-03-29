@@ -44,3 +44,39 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 - `/metrics` is excluded from tracing and logging via `isInternalPath`
 - Distroless container, read-only filesystem
 - No tests (playground project)
+
+## Building behind a proxy
+
+When Docker builds run behind a TLS-inspecting proxy (e.g. Claude Code web sandbox), three things need configuring:
+
+**1. Docker daemon** — set registry mirror and proxy in `/etc/docker/daemon.json`:
+```json
+{
+  "proxies": {
+    "http-proxy": "$HTTP_PROXY",
+    "https-proxy": "$HTTPS_PROXY",
+    "no-proxy": "$NO_PROXY"
+  },
+  "registry-mirrors": ["https://mirror.gcr.io"]
+}
+```
+Restart dockerd after changes.
+
+**2. Build args** — pass proxy vars so `go mod download` works inside the build:
+```yaml
+# docker-compose.base.yml → services.app.build.args
+args:
+  - HTTP_PROXY
+  - HTTPS_PROXY
+  - NO_PROXY=localhost,127.0.0.1
+```
+
+**3. Proxy CA certificate** — if the proxy does TLS inspection, place the CA cert at `service/proxy-ca.crt` and add to Dockerfile before `go mod download`:
+```dockerfile
+ARG HTTP_PROXY HTTPS_PROXY NO_PROXY
+
+COPY proxy-ca.crt* /usr/local/share/ca-certificates/
+RUN if [ -f /usr/local/share/ca-certificates/proxy-ca.crt ]; then \
+      cat /usr/local/share/ca-certificates/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+    fi
+```

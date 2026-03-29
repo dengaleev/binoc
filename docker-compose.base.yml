@@ -7,10 +7,6 @@ services:
     build:
       context: ./service
       dockerfile: Dockerfile
-      args:
-        - HTTP_PROXY
-        - HTTPS_PROXY
-        - NO_PROXY=localhost,127.0.0.1
     environment:
       ADDR: ":8080"
       LOG_FORMAT: "json"
