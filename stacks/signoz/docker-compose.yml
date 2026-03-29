@@ -106,20 +106,17 @@ services:
       retries: 10
       start_period: 30s
     depends_on:
-      zookeeper:
+      clickhouse-keeper:
         condition: service_healthy
     restart: unless-stopped
 
-  zookeeper:
-    image: signoz/zookeeper:3.7.1
-    environment:
-      ZOO_SERVER_ID: "1"
-      ZOO_SERVERS: "0.0.0.0:2888:3888"
-      ALLOW_ANONYMOUS_LOGIN: "yes"
+  clickhouse-keeper:
+    image: clickhouse/clickhouse-keeper:latest-alpine
     volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
+      - keeper-data:/var/lib/clickhouse-keeper
+      - ./keeper-config.xml:/etc/clickhouse-keeper/keeper_config.xml:ro
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/commands/ruok"]
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 9181 | grep imok"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -128,5 +125,5 @@ services:
 
 volumes:
   clickhouse-data:
-  zookeeper-data:
+  keeper-data:
   signoz-sqlite:
