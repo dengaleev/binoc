@@ -23,8 +23,8 @@ Observability playground — a minimal Go service paired with different monitori
 ## Quickstart
 
 ```bash
-make up                       # starts the default stack (grafana-lgtm)
-make up STACK=grafana-lgtm    # or pick one explicitly
+make up                                # starts the default stack (loki-tempo-prometheus)
+make up STACK=loki-tempo-prometheus    # or pick one explicitly
 make list                     # show available stacks
 ```
 
@@ -50,7 +50,7 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 
 | Stack | Description |
 |-------|-------------|
-| `grafana-lgtm` | Loki + Grafana + Tempo + Prometheus, with OTel Collector |
+| `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus, with OTel Collector |
 
 ## Make Targets
 

@@ -9,8 +9,8 @@ Observability playground — a minimal Go service paired with interchangeable mo
 ## Build and run
 
 ```bash
-make up                       # build and start default stack (grafana-lgtm)
-make up STACK=grafana-lgtm    # explicit stack selection
+make up                                # build and start default stack (loki-tempo-prometheus)
+make up STACK=loki-tempo-prometheus    # explicit stack selection
 make down                     # stop and remove volumes
 make logs                     # tail all service logs
 ```

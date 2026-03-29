@@ -1,9 +1,9 @@
-STACK ?= grafana-lgtm
+STACK ?= loki-tempo-prometheus
 COMPOSE := docker compose -f stacks/$(STACK)/docker-compose.yml -p binoc-$(STACK)
 
 .PHONY: up down logs build list
 
-up: ## Start the stack (default: grafana-lgtm)
+up: ## Start the stack (default: loki-tempo-prometheus)
 	$(COMPOSE) up --build -d
 
 down: ## Stop the stack and remove volumes
