@@ -9,16 +9,6 @@
 		file_server
 	}
 
-	handle /time {
-		root * /srv
-		templates {
-			mime application/json
-		}
-		header Content-Type application/json
-		rewrite * /time.json.tmpl
-		file_server
-	}
-
 	handle_path /api/* {
 		tracing
 		reverse_proxy app:8080

@@ -48,6 +48,12 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
+// Unwrap returns the underlying ResponseWriter, allowing middleware like
+// otelhttp to access the original writer's optional interfaces.
+func (rw *responseWriter) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}
+
 func otelMiddleware(next http.Handler) http.Handler {
 	return otelhttp.NewMiddleware("binoc",
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
@@ -62,10 +68,10 @@ func otelMiddleware(next http.Handler) http.Handler {
 	)(next)
 }
 
-// isInternalPath returns true for paths that should be excluded from
+// isInternalPath reports whether a path should be excluded from
 // tracing and logging (health probes, metrics scrapes).
 func isInternalPath(path string) bool {
-	return path == "/metrics" || path == "/healthz" || path == "/readyz"
+	return path == "/metrics" || path == "/healthz"
 }
 
 func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {

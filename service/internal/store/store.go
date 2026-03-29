@@ -60,11 +60,6 @@ func New(ctx context.Context) (*Store, error) {
 	return s, nil
 }
 
-// Ping verifies the database connection is alive.
-func (s *Store) Ping(ctx context.Context) error {
-	return s.db.PingContext(ctx)
-}
-
 // Close closes the database connection.
 func (s *Store) Close() error {
 	return s.db.Close()
@@ -87,6 +82,9 @@ func (s *Store) List(ctx context.Context) ([]Note, error) {
 			return nil, fmt.Errorf("scanning note: %w", err)
 		}
 		notes = append(notes, n)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating notes: %w", err)
 	}
 	return notes, nil
 }

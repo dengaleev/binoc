@@ -18,8 +18,9 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
-		runHealthcheck()
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		cfg := config.Load()
+		runHealthcheck(cfg.Addr)
 		return
 	}
 
@@ -64,7 +65,7 @@ func main() {
 					logger.Error("log provider shutdown error", "error", err)
 				}
 			}()
-			logger = slog.New(instrument.NewMultiHandler(logger.Handler(), otelHandler))
+			logger = slog.New(slog.NewMultiHandler(logger.Handler(), otelHandler))
 			slog.SetDefault(logger)
 			logger.Info("OTLP logging enabled")
 		}
@@ -113,9 +114,8 @@ func main() {
 	}
 }
 
-func runHealthcheck() {
-	cfg := config.Load()
-	resp, err := http.Get(fmt.Sprintf("http://localhost%s/readyz", cfg.Addr))
+func runHealthcheck(addr string) {
+	resp, err := http.Get(fmt.Sprintf("http://localhost%s/healthz", addr))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
 		os.Exit(1)
