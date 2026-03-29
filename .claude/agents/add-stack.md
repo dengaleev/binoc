@@ -9,139 +9,183 @@ tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 
 Create `stacks/$ARGUMENTS/` with a working observability backend for the binoc service.
 
-Read the **Stack principles** in `README.md` first. Every decision should follow them — especially: simplest ingestion path, no auth, pinned tags, three signals with correlation.
+## Guard rails
+
+**Validate input first.** If `$ARGUMENTS` is empty, contains spaces, or contains special characters — stop immediately and report the error. Stack names must be lowercase alphanumeric with hyphens only (e.g. `elastic`, `signoz`, `loki-tempo-prometheus`).
+
+**Do not modify** any of these:
+- `docker-compose.base.yml`
+- `service/` (Go code, Dockerfile, Caddyfile)
+- Other stacks in `stacks/`
+- `go.mod` / `go.sum`
+
+Your scope is `stacks/$ARGUMENTS/`, `README.md`, and `CLAUDE.md` only.
+
+## Principles
+
+Read `README.md` **Stack principles** before anything else. Every decision must follow them:
+- Simplest ingestion path — least configuration, not most optimal
+- No auth — zero friction, UIs accessible immediately
+- Three signals with cross-signal correlation
+- Single telemetry gateway
+- Pinned image tags
 
 ## Phase 1 — Research
 
-Before writing any files, research the target backend:
+Before writing any files, research the target backend. After completing all research steps, **write a summary** of your findings as text output before moving to Phase 2. This summary is your reference for all subsequent phases.
 
-1. **Search** for the official Docker compose / quickstart setup for the backend (e.g. "Elastic observability docker compose OTLP", "SigNoz docker self-hosted")
-2. **Find** the recommended Docker images and their latest stable version tags
-3. **Understand** how the backend ingests each signal:
-   - Does it accept OTLP natively (gRPC/HTTP) or need a collector/agent with a specific exporter?
+### Steps
+
+1. **Official setup** — search for the official Docker compose / quickstart (e.g. "SigNoz docker self-hosted", "Elastic observability docker compose OTLP")
+2. **Docker images** — find the recommended images and their latest stable version tags. Verify tags exist on Docker Hub or the vendor registry.
+3. **Signal ingestion** — for each signal (traces, logs, metrics), determine:
+   - Does the backend accept OTLP natively (gRPC/HTTP)?
    - Does it need a separate component per signal or a unified endpoint?
    - What ports does it expose (UI, ingest, API)?
-4. **Decide on the telemetry gateway** — the app must not talk to backends directly. Prefer the **simplest** option that works, not the most optimal:
-   - **OTel Collector** — the default choice. Use when the backend accepts OTLP or has an OTel Collector contrib exporter.
-   - **Backend's own agent** — use when the backend ships its own agent (e.g. Datadog Agent, Grafana Alloy) AND it can receive OTLP AND it's simpler to configure than the OTel Collector for that backend.
-   The gateway must also **scrape Prometheus metrics** from `app:8080/metrics` and `caddy:2019/metrics` — the app uses Prometheus client library for custom metrics, these are not sent via OTLP.
-5. **Identify** whether the backend bundles its own UI or needs Grafana (and if Grafana, which datasource plugin)
-6. **Note** any required companion services (databases, queues, config stores)
-7. **Cross-signal correlation** — how does the backend link traces ↔ logs ↔ metrics? (e.g. trace ID derived fields in logs, exemplars on metrics, service map data sources). Document what config is needed to enable these links.
-8. **Auth and access** — find how to disable or bypass authentication so the UI is accessible immediately without registration or login. This is a playground — zero friction.
+4. **Telemetry gateway** — the app must not talk to backends directly. Pick the **simplest** option:
+   - **OTel Collector** (default) — use when the backend accepts OTLP or has a collector-contrib exporter.
+   - **Backend's own agent** — use only when it receives OTLP AND is simpler to configure than OTel Collector for that backend.
+   The gateway must also **scrape Prometheus metrics** from `app:8080/metrics` and `caddy:2019/metrics`.
+5. **UI and dashboards** — does the backend bundle its own UI or need Grafana? If Grafana, which datasource plugin? Can dashboards be provisioned via JSON, or does the built-in UI already cover golden signals, logs, and traces?
+6. **Companion services** — databases, queues, config stores required by the backend.
+7. **Cross-signal correlation** — how does the backend link traces ↔ logs ↔ metrics? What config enables these links?
+8. **Auth bypass** — how to disable authentication completely. Look for env vars, config flags, or anonymous access modes.
+9. **Query method** — how to query each signal programmatically for verification (e.g. curl an API, run SQL, use a CLI tool). You will need this in Phase 5.
 
-## Requirements
+### Research summary
 
-Every stack must satisfy these before it ships:
-
-- [ ] `docker-compose.yml` — includes `../../docker-compose.base.yml`, adds backend services
-- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on **app** (`http://` scheme, gRPC port) and **caddy** (HTTP port), pointing to the telemetry gateway
-- [ ] Single telemetry gateway — app and caddy send OTLP to one service (OTel Collector, backend agent, or hybrid), never directly to storage backends
-- [ ] Gateway scrapes Prometheus metrics from `app:8080` and `caddy:2019`
-- [ ] All three signals — traces, logs, metrics — collected and queryable
-- [ ] Cross-signal correlation — trace ID links logs to traces, service map or exemplars link metrics to traces
-- [ ] `index.html` — landing page with endpoint links (`/api/` prefix) and monitoring tool links
-- [ ] All images pinned to exact version tags — no `latest`, no floating tags
-- [ ] Healthchecks on backend services; `depends_on` with `condition: service_healthy` where appropriate
-- [ ] `restart: unless-stopped` on all backend services
-- [ ] Config files mounted read-only (`:ro`)
-- [ ] Named volumes for persistent data
-- [ ] No auth — UI accessible without login, registration, or API keys
-- [ ] Provisioned dashboards covering: request rate, latency percentiles (p50/p95/p99), error rate, in-flight requests, log volume, traces table, logs viewer
-- [ ] Gateway exporters configured with retry and queue settings for resilience
-
-## Reference
-
-Read both existing stacks before starting:
-
-- `stacks/loki-tempo-prometheus/` — Grafana + Loki + Tempo + Prometheus, OTel Collector as gateway
-- `stacks/clickstack/` — HyperDX all-in-one (ClickHouse), OTel Collector writes directly to ClickHouse
-
-Pay attention to:
-
-- How `docker-compose.base.yml` is included and extended
-- OTel Collector config pattern (receivers → processors → exporters, per-signal pipelines)
-- How Prometheus scraping for app metrics is wired through the gateway
-- Landing page structure matching the endpoint list
-- How each stack disables auth (Grafana: anonymous editor; HyperDX: local app mode)
-- How loki-tempo-prometheus configures cross-signal links in Grafana datasource provisioning (derived fields, traces-to-logs, traces-to-metrics, service map)
+After completing the steps above, write a summary covering:
+- Chosen gateway and why
+- Docker images with exact version tags
+- Port map (UI, ingest gRPC, ingest HTTP, API)
+- Auth bypass method
+- Query method for each signal
+- Companion services needed
 
 ## Phase 2 — Scaffold
 
-1. Read `docker-compose.base.yml`, both existing stacks, and `CLAUDE.md`
-2. Create `stacks/$ARGUMENTS/docker-compose.yml`
-3. Create the gateway config — either `otel-collector.yml` or the backend's agent config, depending on research. Include memory limits, retry, and queue settings on exporters.
-4. Create backend-specific configs as needed
-5. Create `stacks/$ARGUMENTS/index.html`
-6. Provision dashboards with the 7 standard panels (request rate, latency p50/p95/p99, error rate, in-flight, log volume, traces table, logs viewer)
-7. Configure cross-signal correlation (trace ID in logs → trace view, exemplars or service map in metrics → traces)
-8. Disable auth / enable anonymous access on all UIs
+Read `docker-compose.base.yml`, both existing stacks (`stacks/loki-tempo-prometheus/`, `stacks/clickstack/`), and `CLAUDE.md`. Pay attention to:
+- How `docker-compose.base.yml` is included and extended
+- Gateway config pattern (receivers → processors → exporters, per-signal pipelines)
+- How Prometheus scraping is wired through the gateway
+- How each stack disables auth (Grafana: anonymous editor; HyperDX: local app mode entrypoint)
+- How loki-tempo-prometheus configures cross-signal links in datasource provisioning
+
+Then create these files:
+
+1. **`stacks/$ARGUMENTS/docker-compose.yml`**
+   - `include: ../../docker-compose.base.yml`
+   - `OTEL_EXPORTER_OTLP_ENDPOINT` on app (gRPC) and caddy (HTTP), pointing to the gateway
+   - Healthchecks on backend services; `depends_on` with `condition: service_healthy`
+   - `restart: unless-stopped` on all backend services
+   - Config files mounted `:ro`, named volumes for data
+   - All images pinned to exact tags from research
+
+2. **Gateway config** (e.g. `otel-collector.yml` or the backend's agent config)
+   - Receives OTLP (gRPC + HTTP)
+   - Scrapes Prometheus from `app:8080/metrics` and `caddy:2019/metrics`
+   - Exports all three signals to the backend
+   - Includes `memory_limiter` processor (if OTel Collector)
+   - Includes `retry_on_failure` on exporters
+
+3. **Backend-specific configs** as needed
+
+4. **`stacks/$ARGUMENTS/index.html`** — landing page with endpoint links (`/api/` prefix) and monitoring tool links
+
+5. **Dashboards** — if the stack uses Grafana, provision JSON dashboards with the 7 standard panels: request rate, latency p50/p95/p99, error rate, in-flight requests, log volume, traces table, logs viewer. If the backend has its own UI that already covers these signals, skip provisioning and note this in the output.
+
+6. **Cross-signal correlation** — configure trace ID linking in logs → traces, and service map or exemplars in metrics → traces
+
+7. **Auth bypass** — disable auth or enable anonymous access on all UIs
 
 ## Phase 3 — Self-review
 
-Before validating, re-read every file you created and check:
+Re-read **every file** you created. Check each item and fix before proceeding:
 
-1. Ports — do the gateway exporter endpoints match the backend service ports?
-2. Pipelines — is every signal (traces, logs, metrics) wired end-to-end from app to backend?
-3. Prometheus scraping — does the gateway scrape `app:8080/metrics` and `caddy:2019/metrics`?
-4. Dependencies — does the gateway wait for backends to be healthy before starting?
-5. Auth — is every UI accessible without login?
-6. Dashboard queries — do they reference the correct datasource UIDs and metric/label names?
-7. Image tags — are all pinned to exact versions, no `latest`?
-
-Fix any issues found before proceeding.
+1. **Ports** — gateway exporter endpoints match backend service ports
+2. **Pipelines** — every signal wired end-to-end from app to backend (no dead ends)
+3. **Prometheus scraping** — gateway scrapes both `app:8080/metrics` and `caddy:2019/metrics`
+4. **Dependencies** — gateway waits for backends to be healthy; app/caddy wait for gateway
+5. **Auth** — every UI accessible without login
+6. **Dashboards** — queries reference correct datasource UIDs and metric/label names
+7. **Image tags** — all pinned to exact versions, no `latest`
+8. **Config mounts** — all `:ro`
+9. **Volumes** — named volumes for all persistent data
+10. **`docker-compose.base.yml`** — confirm you did NOT modify it
 
 ## Phase 4 — Validate
 
-1. Run `docker compose -f stacks/$ARGUMENTS/docker-compose.yml config` and fix any errors
-2. Update `README.md` stacks table
-3. Update `CLAUDE.md` build-and-run section
+1. Run `docker compose -f stacks/$ARGUMENTS/docker-compose.yml config` — fix any errors
+2. Add the stack to the `README.md` stacks table
+3. Add the stack to `CLAUDE.md` build-and-run section
 
 ## Phase 5 — End-to-end test
 
-Build and run the full stack, then verify every aspect:
+Build and run the full stack. You have **3 attempts** to get a clean pass. If all 3 fail, stop and report what's broken.
 
-1. **Start the stack**
-   ```
-   make up STACK=$ARGUMENTS
-   ```
+### Setup
 
-2. **Test endpoints** — hit all four and confirm 200 responses:
-   ```
-   curl -s http://localhost/api/echo?msg=hello
-   curl -s http://localhost/api/notes
-   curl -s http://localhost/api/random
-   curl -s http://localhost/api/chain?msg=hello
-   ```
+```
+make up STACK=$ARGUMENTS
+```
 
-3. **Generate traffic** — send 10+ requests to each endpoint, wait for batch flush (~15s)
+If the build fails, check the Docker build logs. Common causes: proxy issues (see CLAUDE.md proxy section), missing images, typos in image tags. Fix and retry.
 
-4. **Verify traces** — query the backend and confirm traces exist from both `binoc` and `caddy` services. Verify `/api/chain` produces a multi-service distributed trace.
+Wait for all containers to be healthy before proceeding:
+```
+docker compose -f stacks/$ARGUMENTS/docker-compose.yml ps
+```
 
-5. **Verify logs** — query the backend and confirm log entries exist with structured fields (method, path, status, duration_ms). Check that TraceId/SpanId are populated for log-to-trace correlation.
+### Endpoint tests
 
-6. **Verify metrics** — confirm these metrics are present:
+Hit all four endpoints and confirm 200 responses:
+```
+curl -sf http://localhost/api/echo?msg=hello
+curl -sf http://localhost/api/notes
+curl -sf http://localhost/api/random
+curl -sf http://localhost/api/chain?msg=hello
+```
+
+### Traffic generation
+
+Send 10+ requests to each endpoint, then wait ~15s for the batch to flush:
+```
+for i in $(seq 1 10); do
+  curl -s http://localhost/api/echo?msg=test$i > /dev/null
+  curl -s http://localhost/api/random > /dev/null
+  curl -s http://localhost/api/notes > /dev/null
+  curl -s http://localhost/api/chain?msg=test$i > /dev/null
+done
+sleep 15
+```
+
+### Signal verification
+
+Use the query methods identified in Phase 1 research to verify:
+
+1. **Traces** — traces exist from both `binoc` and `caddy` services. A `/api/chain` request produces a multi-service distributed trace with spans from both services under the same trace ID.
+2. **Logs** — log entries exist with structured fields (method, path, status, duration_ms). `TraceId` and `SpanId` are populated for log-to-trace correlation.
+3. **Metrics** — all four app metrics are present:
    - `binoc_requests_total` (counter)
    - `binoc_request_duration_seconds` (histogram)
    - `binoc_response_size_bytes` (histogram)
    - `binoc_in_flight_requests` (gauge)
+4. **Cross-signal correlation** — take a trace ID from a log entry and confirm the same trace ID exists in traces.
+5. **UI access** — monitoring UI returns HTTP 200 without authentication.
+6. **Gateway health** — no errors in gateway logs after initial startup (filter out startup retries from before backends were ready).
 
-7. **Verify cross-signal correlation** — take a trace ID from a log entry and confirm the same trace ID exists in the traces backend.
+### Teardown
 
-8. **Verify UI access** — confirm the monitoring UI returns HTTP 200 without authentication.
+```
+make down STACK=$ARGUMENTS
+```
 
-9. **Check gateway health** — verify no errors in the gateway (collector/agent) logs after the initial startup.
+### On failure
 
-10. **Tear down**
-    ```
-    make down STACK=$ARGUMENTS
-    ```
+If a check fails:
+1. Read the relevant container logs to diagnose
+2. Fix the config
+3. `make down STACK=$ARGUMENTS && make up STACK=$ARGUMENTS`
+4. Re-run the failing checks
 
-If any check fails, fix the issue and re-run from step 1.
-
-## Conventions
-
-- Stack directory name should describe the backends (e.g. `elastic`, `clickstack`, `loki-tempo-prometheus`)
-- The app always sends OTLP — the gateway is responsible for translation if the backend doesn't speak OTLP
-- Prometheus scraping of `app:8080/metrics` and `caddy:2019/metrics` must go through the gateway
-- Use the same OTel Collector contrib image version as other stacks when using OTel Collector
+After 3 failed attempts, stop and report: what works, what doesn't, and your best diagnosis.
