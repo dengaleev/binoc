@@ -1,8 +1,8 @@
 ---
 name: add-stack
-description: Scaffold a new observability stack for the binoc playground
-argument-hint: <stack-name>
-user-invocable: true
+description: Scaffold a new observability stack for the binoc playground. Use when asked to add, create, or set up a new monitoring stack.
+model: sonnet
+tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Add a new observability stack
