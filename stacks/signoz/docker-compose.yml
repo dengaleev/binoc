@@ -111,7 +111,7 @@ services:
     restart: unless-stopped
 
   clickhouse-keeper:
-    image: clickhouse/clickhouse-keeper:latest-alpine
+    image: clickhouse/clickhouse-keeper:25.5.6-alpine
     volumes:
       - keeper-data:/var/lib/clickhouse-keeper
       - ./keeper-config.xml:/etc/clickhouse-keeper/keeper_config.xml:ro
