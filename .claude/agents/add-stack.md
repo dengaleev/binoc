@@ -16,10 +16,14 @@ Before writing any files, research the target backend:
 1. **Search** for the official Docker compose / quickstart setup for the backend (e.g. "Elastic observability docker compose OTLP", "SigNoz docker self-hosted")
 2. **Find** the recommended Docker images and their latest stable version tags
 3. **Understand** how the backend ingests each signal:
-   - Does it accept OTLP natively (gRPC/HTTP) or need the OTel Collector with a specific exporter?
+   - Does it accept OTLP natively (gRPC/HTTP) or need a collector/agent with a specific exporter?
    - Does it need a separate component per signal or a unified endpoint?
    - What ports does it expose (UI, ingest, API)?
-4. **Check** OTel Collector contrib exporter support — search for the relevant exporter in the collector-contrib docs and note required config fields
+4. **Decide on the telemetry gateway** — the app must not talk to backends directly. Pick the best option:
+   - **OTel Collector** (default) — use when the backend accepts OTLP or has an OTel Collector contrib exporter. Check the collector-contrib docs for the exporter and note required config fields.
+   - **Backend's own agent/collector** — some stacks ship their own agent (e.g. Datadog Agent, Elastic APM Server, Grafana Alloy, Vector). Use it when it's the standard recommended path AND it can receive OTLP from the app. The app always sends OTLP; the gateway translates.
+   - **Hybrid** — use OTel Collector as the front door (receives OTLP + scrapes Prometheus) and forward to the backend's agent if needed.
+   Whatever you choose, the gateway must also **scrape Prometheus metrics** from `app:8080/metrics` and `caddy:2019/metrics` — the app uses Prometheus client library for custom metrics, these are not sent via OTLP.
 5. **Identify** whether the backend bundles its own UI or needs Grafana (and if Grafana, which datasource plugin)
 6. **Note** any required companion services (databases, queues, config stores)
 7. **Cross-signal correlation** — how does the backend link traces ↔ logs ↔ metrics? (e.g. trace ID derived fields in logs, exemplars on metrics, service map data sources). Document what config is needed to enable these links.
@@ -30,8 +34,9 @@ Before writing any files, research the target backend:
 Every stack must satisfy these before it ships:
 
 - [ ] `docker-compose.yml` — includes `../../docker-compose.base.yml`, adds backend services
-- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on **app** (`http://` scheme, gRPC port) and **caddy** (HTTP port)
-- [ ] Single telemetry gateway — app and caddy never talk to backends directly
+- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on **app** (`http://` scheme, gRPC port) and **caddy** (HTTP port), pointing to the telemetry gateway
+- [ ] Single telemetry gateway — app and caddy send OTLP to one service (OTel Collector, backend agent, or hybrid), never directly to storage backends
+- [ ] Gateway scrapes Prometheus metrics from `app:8080` and `caddy:2019`
 - [ ] All three signals — traces, logs, metrics — collected and queryable
 - [ ] Cross-signal correlation — trace ID links logs to traces, service map or exemplars link metrics to traces
 - [ ] `index.html` — landing page with endpoint links (`/api/` prefix) and monitoring tool links
@@ -42,20 +47,20 @@ Every stack must satisfy these before it ships:
 - [ ] Named volumes for persistent data
 - [ ] No auth — UI accessible without login, registration, or API keys
 - [ ] Provisioned dashboards covering: request rate, latency percentiles (p50/p95/p99), error rate, in-flight requests, log volume, traces table, logs viewer
-- [ ] OTel Collector exporters configured with `retry_on_failure` and `sending_queue` for resilience
+- [ ] Gateway exporters configured with retry and queue settings for resilience
 
 ## Reference
 
 Read both existing stacks before starting:
 
-- `stacks/loki-tempo-prometheus/` — Grafana + Loki + Tempo + Prometheus, separate backends per signal
-- `stacks/clickstack/` — HyperDX all-in-one (ClickHouse), single backend for all signals
+- `stacks/loki-tempo-prometheus/` — Grafana + Loki + Tempo + Prometheus, OTel Collector as gateway
+- `stacks/clickstack/` — HyperDX all-in-one (ClickHouse), OTel Collector writes directly to ClickHouse
 
 Pay attention to:
 
 - How `docker-compose.base.yml` is included and extended
 - OTel Collector config pattern (receivers → processors → exporters, per-signal pipelines)
-- How the reference stack's `otel-collector.yml` wires Prometheus scraping for app metrics
+- How Prometheus scraping for app metrics is wired through the gateway
 - Landing page structure matching the endpoint list
 - How each stack disables auth (Grafana: anonymous editor; HyperDX: local app mode)
 - How loki-tempo-prometheus configures cross-signal links in Grafana datasource provisioning (derived fields, traces-to-logs, traces-to-metrics, service map)
@@ -64,7 +69,7 @@ Pay attention to:
 
 1. Read `docker-compose.base.yml`, both existing stacks, and `CLAUDE.md`
 2. Create `stacks/$ARGUMENTS/docker-compose.yml`
-3. Create `stacks/$ARGUMENTS/otel-collector.yml` with OTLP receivers + Prometheus scraper + backend exporters; include `memory_limiter` processor and `retry_on_failure` on exporters
+3. Create the gateway config — either `otel-collector.yml` or the backend's agent config, depending on research. Include memory limits, retry, and queue settings on exporters.
 4. Create backend-specific configs as needed
 5. Create `stacks/$ARGUMENTS/index.html`
 6. Provision dashboards with the 7 standard panels (request rate, latency p50/p95/p99, error rate, in-flight, log volume, traces table, logs viewer)
@@ -75,12 +80,13 @@ Pay attention to:
 
 Before validating, re-read every file you created and check:
 
-1. Ports — do the OTel Collector exporter endpoints match the backend service ports?
-2. Pipelines — is every signal (traces, logs, metrics) wired from receiver through processor to exporter?
-3. Dependencies — does the collector wait for backends to be healthy before starting?
-4. Auth — is every UI accessible without login?
-5. Dashboard queries — do they reference the correct datasource UIDs and metric/label names?
-6. Image tags — are all pinned to exact versions, no `latest`?
+1. Ports — do the gateway exporter endpoints match the backend service ports?
+2. Pipelines — is every signal (traces, logs, metrics) wired end-to-end from app to backend?
+3. Prometheus scraping — does the gateway scrape `app:8080/metrics` and `caddy:2019/metrics`?
+4. Dependencies — does the gateway wait for backends to be healthy before starting?
+5. Auth — is every UI accessible without login?
+6. Dashboard queries — do they reference the correct datasource UIDs and metric/label names?
+7. Image tags — are all pinned to exact versions, no `latest`?
 
 Fix any issues found before proceeding.
 
@@ -123,7 +129,7 @@ Build and run the full stack, then verify every aspect:
 
 8. **Verify UI access** — confirm the monitoring UI returns HTTP 200 without authentication.
 
-9. **Check collector health** — verify no errors in the OTel Collector logs after the initial startup.
+9. **Check gateway health** — verify no errors in the gateway (collector/agent) logs after the initial startup.
 
 10. **Tear down**
     ```
@@ -135,6 +141,6 @@ If any check fails, fix the issue and re-run from step 1.
 ## Conventions
 
 - Stack directory name should describe the backends (e.g. `elastic`, `clickstack`, `loki-tempo-prometheus`)
-- OTel Collector is always the telemetry gateway — app sends OTLP to collector, collector routes to backends
-- Prometheus scraping of `app:8080/metrics` and `caddy:2019/metrics` goes through the collector
-- Use the same OTel Collector contrib image version as other stacks for consistency
+- The app always sends OTLP — the gateway is responsible for translation if the backend doesn't speak OTLP
+- Prometheus scraping of `app:8080/metrics` and `caddy:2019/metrics` must go through the gateway
+- Use the same OTel Collector contrib image version as other stacks when using OTel Collector
