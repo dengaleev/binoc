@@ -80,7 +80,7 @@ services:
     restart: unless-stopped
 
   clickhouse:
-    image: clickhouse/clickhouse-server:25.5.6
+    image: clickhouse/clickhouse-server:26.3.2.3
     environment:
       CLICKHOUSE_DB: ""
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
