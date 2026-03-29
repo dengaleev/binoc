@@ -34,8 +34,6 @@ services:
     environment:
       LOW_CARDINAL_EXCEPTION_GROUPING: "false"
       SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
-      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER: "cluster"
-      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION: "true"
     depends_on:
       signoz-telemetrystore-migrator:
         condition: service_completed_successfully
@@ -51,9 +49,7 @@ services:
         /signoz-otel-collector migrate async up
     environment:
       SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
-      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER: "cluster"
-      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION: "true"
-      SIGNOZ_OTEL_COLLECTOR_TIMEOUT: "10m"
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_TIMEOUT: "10m"
     depends_on:
       clickhouse:
         condition: service_healthy
