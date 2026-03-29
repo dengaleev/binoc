@@ -23,28 +23,30 @@ func (s *Server) handleChain(w http.ResponseWriter, r *http.Request) {
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, target, nil)
 	if err != nil {
 		s.logger.Error("creating chain request", "error", err)
-		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		jsonError(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		s.logger.Error("chain call failed", "error", err, "target", target)
-		http.Error(w, `{"error":"upstream error"}`, http.StatusBadGateway)
+		jsonError(w, "upstream error", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.logger.Error("reading chain response", "error", err)
+		jsonError(w, "upstream error", http.StatusBadGateway)
+		return
+	}
 
-	result := map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"chain_timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 		"upstream_status": resp.StatusCode,
 		"upstream_body":   json.RawMessage(body),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	})
 }
 
 func newTracedHTTPClient() *http.Client {

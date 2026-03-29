@@ -108,6 +108,16 @@ func (s *Server) Handler() http.Handler {
 	return h
 }
 
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
+func jsonError(w http.ResponseWriter, msg string, status int) {
+	writeJSON(w, status, map[string]string{"error": msg})
+}
+
 func (s *Server) handleGetEcho(w http.ResponseWriter, r *http.Request) {
 	msg := r.URL.Query().Get("msg")
 	resp := map[string]any{
@@ -115,10 +125,7 @@ func (s *Server) handleGetEcho(w http.ResponseWriter, r *http.Request) {
 		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		s.logger.Error("encoding response", "error", err)
-	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) handlePostEcho(w http.ResponseWriter, r *http.Request) {
