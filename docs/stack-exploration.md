@@ -42,7 +42,20 @@ Comprehensive survey of monitoring stacks that can be added to the binoc playgro
 - **Value:** Unified traces/metrics/logs with grouping, alerting, dashboards. Uses ClickHouse for telemetry and PostgreSQL for metadata. Has a generous open-source edition.
 - **Complexity:** Medium — ClickHouse + PostgreSQL + Uptrace
 
-### 1c. ClickHouse + Grafana (DIY)
+### 1c. ClickStack (ClickHouse + HyperDX)
+
+| Component     | Tool                           |
+|---------------|--------------------------------|
+| Collector     | OTel Collector (bundled)       |
+| Storage       | ClickHouse                     |
+| Visualization | HyperDX UI                     |
+
+- **OTLP support:** Native OTLP gRPC (4317) and HTTP (4318)
+- **Docker:** `docker.hyperdx.io/hyperdx/hyperdx-all-in-one` (single container for dev)
+- **Value:** Officially backed by ClickHouse Inc. (acquired HyperDX in 2025). Combines Lucene-style search with SQL analytics. Session replays in addition to logs/metrics/traces. Single-container quickstart.
+- **Complexity:** Low — single all-in-one container for development
+
+### 1d. ClickHouse + Grafana (DIY)
 
 | Component     | Tool                           |
 |---------------|--------------------------------|
@@ -79,11 +92,14 @@ Comprehensive survey of monitoring stacks that can be added to the binoc playgro
 | Component     | Tool                           |
 |---------------|--------------------------------|
 | Collector     | OTel Collector                 |
-| All signals   | VictoriaMetrics ecosystem      |
-| Visualization | Grafana or VM UI               |
+| Metrics       | VictoriaMetrics (port 8428)    |
+| Logs          | VictoriaLogs (port 9428)       |
+| Traces        | VictoriaTraces (port 10428)    |
+| Visualization | Grafana or VMUI                |
 
-- **Note:** VictoriaTraces (based on Tempo fork) is available for trace storage
-- **Value:** Single-vendor stack with excellent resource efficiency. All components share similar configuration patterns and operational model.
+- **OTLP support:** All three components accept OTLP natively — no adapters needed
+- **Docker:** `victoriametrics/victoria-metrics`, `victoriametrics/victoria-logs`, `victoriametrics/victoria-traces`
+- **Value:** Single-vendor stack with excellent resource efficiency. All components share similar configuration patterns. Lower CPU/RAM/storage than Prometheus+Loki+Tempo. No external storage dependencies (no S3/object storage needed).
 
 ---
 
@@ -230,13 +246,13 @@ Replace OTel Collector with Grafana Alloy in any Grafana-based stack. Alloy is b
 
 | Component     | Tool                           |
 |---------------|--------------------------------|
-| Metrics       | TimescaleDB + Promscale        |
+| Metrics       | TimescaleDB                    |
 | Visualization | Grafana                        |
 
-- **OTLP support:** Via Prometheus remote write
+- **OTLP support:** Via Prometheus remote write adapter
 - **Docker:** `timescale/timescaledb`
-- **Value:** SQL-based metrics storage. Use standard PostgreSQL tooling for analysis. Good for teams already using PostgreSQL.
-- **Note:** Promscale was deprecated; consider the Prometheus PostgreSQL adapter instead
+- **Value:** SQL-based metrics storage. Use standard PostgreSQL tooling for analysis.
+- **Note:** Promscale is **deprecated**. Not recommended for new stacks — use VictoriaMetrics or Mimir instead.
 
 ---
 
@@ -321,19 +337,29 @@ Replace OTel Collector with Grafana Alloy in any Grafana-based stack. Alloy is b
 
 ## 9. All-in-One Platforms
 
-### 9a. Highlight.io
+### 9a. OpenObserve
 
-- Open-source full-stack monitoring (sessions, errors, logs, traces)
-- Docker-compose available
-- OTLP support for backend telemetry
+| Component     | Tool                           |
+|---------------|--------------------------------|
+| All signals   | OpenObserve (single binary)    |
+| Visualization | Built-in UI                    |
 
-### 9b. HyperDX
+- **OTLP support:** Native OTLP HTTP and gRPC
+- **Docker:** `openobserve/openobserve` — single container
+- **Value:** Claims 140x lower storage cost than Elasticsearch. Single Rust binary handles logs, metrics, traces, and front-end monitoring. Built-in UI (no Grafana needed). Stores data in columnar format on S3/local. Extremely simple to deploy — the simplest full-stack option.
+- **Complexity:** Very low — single container
 
-- Open-source observability platform
-- ClickHouse-based storage
-- Native OTLP support
-- Docker-compose available
-- Unified search across all signal types
+### 9b. Parseable
+
+| Component     | Tool                           |
+|---------------|--------------------------------|
+| Logs          | Parseable                      |
+| Visualization | Built-in UI                    |
+
+- **OTLP support:** Native OTLP HTTP and gRPC for logs
+- **Docker:** `parseable/parseable` — under 50MB memory footprint
+- **Value:** Rust-based log platform storing data in Apache Parquet on S3/local. SQL queries via Apache Arrow DataFusion. Ultra-minimal deployment. Expanding into metrics and traces.
+- **Complexity:** Very low — single container, logs-focused
 
 ---
 
@@ -341,22 +367,55 @@ Replace OTel Collector with Grafana Alloy in any Grafana-based stack. Alloy is b
 
 Based on unique value, Docker-compose friendliness, and educational diversity:
 
-| Priority | Stack Name                    | Signals           | Why                                          |
-|----------|-------------------------------|-------------------|----------------------------------------------|
-| 1        | **jaeger-prometheus**         | Traces+Metrics    | CNCF graduated, Jaeger v2 is OTLP-native    |
-| 2        | **victoriametrics-loki-tempo**| All three         | Shows VM as Prometheus drop-in replacement   |
-| 3        | **signoz**                    | All three         | ClickHouse-based all-in-one, very popular    |
-| 4        | **quickwit-prometheus-jaeger**| All three         | Rust-based search engine, cost-efficient logs|
-| 5        | **opensearch**                | All three         | Full-text search focus, Data Prepper pipeline|
-| 6        | **elk**                       | All three         | Industry standard, Elastic APM with OTLP    |
-| 7        | **mimir-loki-tempo**          | All three         | Production Grafana stack with Alloy collector|
-| 8        | **clickhouse-grafana**        | All three         | DIY ClickHouse, maximum flexibility          |
-| 9        | **skywalking**                | All three         | Full APM with topology and profiling         |
-| 10       | **greptimedb**                | All three         | Emerging unified DB, single storage engine   |
-| 11       | **thanos-loki-tempo**         | All three         | Long-term storage with object storage        |
-| 12       | **zipkin-prometheus-loki**    | All three         | Lightweight tracing, educational             |
-| 13       | **uptrace**                   | All three         | ClickHouse all-in-one alternative to SigNoz  |
-| 14       | **coroot**                    | All three         | eBPF auto-instrumentation focus              |
+### Tier 1 — Highest value, most distinct from existing stack
+
+| Priority | Stack Name                     | Signals           | Why                                          |
+|----------|--------------------------------|-------------------|----------------------------------------------|
+| 1        | **signoz**                     | All three         | Most popular OSS Datadog alternative, ClickHouse-based, single UI |
+| 2        | **victoriametrics**            | All three         | Complete alternative, all components accept OTLP natively |
+| 3        | **jaeger-prometheus**          | Traces+Metrics    | Two CNCF Graduated projects, Jaeger v2 is OTLP-native |
+| 4        | **clickstack**                 | All three         | ClickHouse's official platform, single-container quickstart |
+| 5        | **openobserve**                | All three         | Single Rust binary, extreme simplicity, 140x less storage than ES |
+
+### Tier 2 — Strong educational/comparison value
+
+| Priority | Stack Name                     | Signals           | Why                                          |
+|----------|--------------------------------|-------------------|----------------------------------------------|
+| 6        | **opensearch**                 | All three         | Official observability stack, Trace Analytics built-in |
+| 7        | **mimir-loki-tempo**           | All three         | Full Grafana LGTM, production-grade with Alloy collector |
+| 8        | **greptimedb**                 | All three         | Unified Rust DB, SQL+PromQL, single storage engine |
+| 9        | **elk**                        | All three         | Industry standard, Elastic APM with OTLP |
+| 10       | **quickwit-jaeger**            | Logs+Traces       | Object-storage-native search, Jaeger UI integration |
+
+### Tier 3 — Niche but interesting
+
+| Priority | Stack Name                     | Signals           | Why                                          |
+|----------|--------------------------------|-------------------|----------------------------------------------|
+| 11       | **skywalking**                 | All three         | Full APM with topology maps and profiling |
+| 12       | **zipkin-prometheus**          | Traces+Metrics    | Historical significance, lightweight, educational |
+| 13       | **clickhouse-grafana**         | All three         | DIY ClickHouse, maximum flexibility |
+| 14       | **uptrace**                    | All three         | ClickHouse all-in-one alternative to SigNoz |
+| 15       | **thanos-loki-tempo**          | All three         | Long-term storage with object storage |
+
+### Not recommended for this playground
+
+| Tool              | Reason                                              |
+|-------------------|-----------------------------------------------------|
+| Cortex            | Superseded by Mimir                                 |
+| Quickwit          | Acquired by Datadog (Jan 2025), uncertain OSS future|
+| M3                | Stale project, no native OTLP                       |
+| Promscale         | Deprecated                                          |
+| Coroot            | eBPF needs privileged containers, awkward in Docker  |
+| InfluxDB 3        | Limited OTLP support, better for IoT than observability |
+
+### Add-ons (complement any stack)
+
+| Tool              | Signal      | Value                                           |
+|-------------------|-------------|--------------------------------------------------|
+| **Pyroscope**     | Profiling   | 4th signal — continuous profiling with flamegraphs |
+| **Grafana Alloy** | Collector   | Replaces OTel Collector with visual pipeline debugger |
+| **Perses**        | Dashboards  | CNCF Sandbox Grafana alternative, Apache 2.0 licensed |
+| **Fluent Bit**    | Log routing | CNCF Graduated, ultra-lightweight alternative to OTel Collector |
 
 ---
 
