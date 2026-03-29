@@ -115,12 +115,9 @@ services:
     environment:
       ZOO_SERVER_ID: "1"
       ZOO_SERVERS: "0.0.0.0:2888:3888"
-      ZOO_ENABLE_PROMETHEUS_METRICS: "yes"
-      ZOO_PROMETHEUS_METRICS_PORT_NUMBER: "9141"
       ALLOW_ANONYMOUS_LOGIN: "yes"
     volumes:
       - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-log:/var/lib/zookeeper/log
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/commands/ruok"]
       interval: 10s
@@ -132,5 +129,4 @@ services:
 volumes:
   clickhouse-data:
   zookeeper-data:
-  zookeeper-log:
   signoz-sqlite:
