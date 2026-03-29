@@ -1,17 +1,27 @@
 ---
 name: add-stack
 description: Scaffold a new observability stack for the binoc playground. Use when asked to add, create, or set up a new monitoring stack.
+argument-hint: "<stack-name> <description of the stack>"
 model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 ---
 
 # Add a new observability stack
 
-Create `stacks/$ARGUMENTS/` with a working observability backend for the binoc service.
+`$ARGUMENTS` contains both the stack name and a free-form description.
+
+**Parse the input:**
+- The **first word** is the stack directory name (e.g. `elastic`, `signoz`, `clickstack`)
+- Everything after the first word is the **description** — what backend to use, any preferences, constraints, or specific tools the user wants
+
+Examples:
+- `elastic ELK-based stack using Elasticsearch, Kibana, and APM Server`
+- `signoz SigNoz all-in-one with ClickHouse`
+- `datadog Datadog Agent forwarding to local mock backend`
 
 ## Guard rails
 
-**Validate input first.** If `$ARGUMENTS` is empty, contains spaces, or contains special characters — stop immediately and report the error. Stack names must be lowercase alphanumeric with hyphens only (e.g. `elastic`, `signoz`, `loki-tempo-prometheus`).
+**Validate the stack name** (first word of `$ARGUMENTS`). It must be non-empty, lowercase alphanumeric with hyphens only. If invalid — stop and report the error.
 
 **Do not modify** any of these:
 - `docker-compose.base.yml`
