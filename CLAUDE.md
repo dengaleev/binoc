@@ -49,7 +49,8 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 
 ## Key conventions
 
-- Go 1.26; no web framework, plain `net/http` with method routing (`GET /echo`)
+- Go 1.26; use modern stdlib: `slog.NewMultiHandler`, `net/http` method routing (`GET /echo`), `math/rand/v2`, range-over-int
+- No web framework; plain `net/http` with `ServeMux`
 - All app config via environment variables; OTEL-specific vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) handled by the SDK, not the app
 - Functional options pattern for `server.New(opts...)`
 - `/metrics` is excluded from tracing and logging via `isInternalPath`
