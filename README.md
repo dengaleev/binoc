@@ -2,6 +2,24 @@
 
 Observability playground — a minimal Go service paired with different monitoring stacks.
 
+## Principles
+
+### Service
+
+- Minimal — few endpoints, in-memory state, no external dependencies
+- Env-only configuration; OTEL standard env vars for instrumentation
+- Fully instrumented — every request produces a trace, a log line, and a metric
+- Diverse workloads — varying latency, error rates, DB spans, distributed calls
+
+### Stack
+
+- Single-node, no HA — playground, not production
+- Minimal configuration — sensible defaults, works out of the box
+- Three signals — metrics, logs, traces with cross-signal correlation
+- Single telemetry gateway — app never talks to backends directly
+- End-to-end traces — reverse proxy propagates trace context
+- Provisioned dashboards covering golden signals, logs, and traces
+
 ## Quickstart
 
 ```bash
@@ -30,17 +48,15 @@ All app endpoints are published through Caddy under the `/api` prefix. Caddy str
 | `GET` | `/api/notes` | List notes from in-memory SQLite (seeded on startup). Produces DB query spans via `otelsql`. |
 | `GET` | `/api/chain?msg=hello` | Calls `/api/echo` through Caddy, producing a distributed trace: Caddy → app → Caddy → app. |
 | `GET` | `/api/random` | Random 0-500ms delay, ~10% error rate. Makes latency and error panels interesting. |
-| `GET` | `/time` | Returns current time (served directly by Caddy, not proxied to app). |
 
-Technical endpoints (`/healthz`, `/readyz`, `/metrics`) are only on the app container (`:8080`), not exposed through Caddy.
+The `/metrics` endpoint is only on the app container (`:8080`), not exposed through Caddy.
 
 ### Why these routes exist
 
 - **`/echo`** — minimal endpoint for baseline traces and metrics
 - **`/notes`** — adds database query spans (`sql.conn.query`) so traces have depth
 - **`/chain`** — creates multi-service distributed traces with trace context propagation across HTTP boundaries (app → Caddy → app)
-- **`/random`** — generates realistic latency spread and error rate so dashboard panels aren't flat
-- **`/time`** — Caddy-only handler; polled by a background ticker in the app every 1s to produce continuous background traces and logs
+- **`/random`** — generates realistic latency spread and error rate so dashboard panels aren't flat; polled by a background ticker every 1s for continuous telemetry
 
 ### Instrumentation
 
