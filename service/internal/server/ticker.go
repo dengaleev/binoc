@@ -13,8 +13,8 @@ import (
 
 var tracer = otel.Tracer("binoc/ticker")
 
-// startTicker runs a background loop that fetches /time from Caddy every
-// second and logs the result. Each iteration creates its own trace.
+// startTicker runs a background loop that fetches /time and /api/random from
+// Caddy every second, producing continuous traces, logs, and error rate.
 func (s *Server) startTicker(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Second)
 	go func() {
@@ -25,6 +25,7 @@ func (s *Server) startTicker(ctx context.Context) {
 				return
 			case <-ticker.C:
 				s.fetchTime(ctx)
+				s.pokeRandom(ctx)
 			}
 		}
 	}()
@@ -58,4 +59,21 @@ func (s *Server) fetchTime(ctx context.Context) {
 	}
 
 	s.logger.Info("tick", slog.String("caddy_time", result.Time))
+}
+
+func (s *Server) pokeRandom(ctx context.Context) {
+	ctx, span := tracer.Start(ctx, "ticker.poke_random")
+	defer span.End()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.selfURL+"/api/random", nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		s.logger.Error("ticker: random request failed", "error", err)
+		return
+	}
+	resp.Body.Close()
 }
