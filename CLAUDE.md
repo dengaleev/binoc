@@ -62,3 +62,45 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 See the **Stack** section under **Principles** in `README.md` — that is the source of truth. Do not duplicate the list here.
 
 Use the `/add-stack <name> <description>` agent to scaffold new stacks.
+
+## Proxy environment
+
+Skip this section if `$HTTP_PROXY` is empty. When running behind a TLS-inspecting proxy (e.g. Claude Code web sandbox), all four steps below are required.
+
+**1. Fix `no_proxy`** — if `*.googleapis.com` or `*.google.com` are listed in `$no_proxy`, remove them so traffic routes through the proxy. Without this, Go toolchain downloads and Docker image pulls fail with timeouts.
+
+**2. Go toolchain** — override per command or export in shell:
+
+```bash
+no_proxy=localhost,127.0.0.1 go mod tidy
+```
+
+**3. Docker daemon** — create `/etc/docker/daemon.json` with proxy and registry mirror, then restart dockerd. Strip `*.googleapis.com` and `*.google.com` from `no-proxy` here too.
+
+```json
+{
+  "proxies": {
+    "http-proxy": "$HTTP_PROXY",
+    "https-proxy": "$HTTPS_PROXY",
+    "no-proxy": "localhost,127.0.0.1"
+  },
+  "registry-mirrors": ["https://mirror.gcr.io"]
+}
+```
+
+**4. Docker build** — the daemon proxy only covers image pulls, not processes inside the build. Pass proxy vars as build args.
+
+Add to `docker-compose.base.yml` → `services.app.build`:
+
+```yaml
+args:
+  - HTTP_PROXY
+  - HTTPS_PROXY
+  - NO_PROXY=localhost,127.0.0.1
+```
+
+Add to `service/Dockerfile` before `go mod download`:
+
+```dockerfile
+ARG HTTP_PROXY HTTPS_PROXY NO_PROXY
+```
