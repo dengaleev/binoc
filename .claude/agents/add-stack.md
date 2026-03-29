@@ -9,6 +9,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 
 Create `stacks/$ARGUMENTS/` with a working observability backend for the binoc service.
 
+Read the **Stack principles** in `README.md` first. Every decision should follow them — especially: simplest ingestion path, no auth, pinned tags, three signals with correlation.
+
 ## Phase 1 — Research
 
 Before writing any files, research the target backend:
@@ -19,11 +21,10 @@ Before writing any files, research the target backend:
    - Does it accept OTLP natively (gRPC/HTTP) or need a collector/agent with a specific exporter?
    - Does it need a separate component per signal or a unified endpoint?
    - What ports does it expose (UI, ingest, API)?
-4. **Decide on the telemetry gateway** — the app must not talk to backends directly. Pick the best option:
-   - **OTel Collector** (default) — use when the backend accepts OTLP or has an OTel Collector contrib exporter. Check the collector-contrib docs for the exporter and note required config fields.
-   - **Backend's own agent/collector** — some stacks ship their own agent (e.g. Datadog Agent, Elastic APM Server, Grafana Alloy, Vector). Use it when it's the standard recommended path AND it can receive OTLP from the app. The app always sends OTLP; the gateway translates.
-   - **Hybrid** — use OTel Collector as the front door (receives OTLP + scrapes Prometheus) and forward to the backend's agent if needed.
-   Whatever you choose, the gateway must also **scrape Prometheus metrics** from `app:8080/metrics` and `caddy:2019/metrics` — the app uses Prometheus client library for custom metrics, these are not sent via OTLP.
+4. **Decide on the telemetry gateway** — the app must not talk to backends directly. Prefer the **simplest** option that works, not the most optimal:
+   - **OTel Collector** — the default choice. Use when the backend accepts OTLP or has an OTel Collector contrib exporter.
+   - **Backend's own agent** — use when the backend ships its own agent (e.g. Datadog Agent, Grafana Alloy) AND it can receive OTLP AND it's simpler to configure than the OTel Collector for that backend.
+   The gateway must also **scrape Prometheus metrics** from `app:8080/metrics` and `caddy:2019/metrics` — the app uses Prometheus client library for custom metrics, these are not sent via OTLP.
 5. **Identify** whether the backend bundles its own UI or needs Grafana (and if Grafana, which datasource plugin)
 6. **Note** any required companion services (databases, queues, config stores)
 7. **Cross-signal correlation** — how does the backend link traces ↔ logs ↔ metrics? (e.g. trace ID derived fields in logs, exemplars on metrics, service map data sources). Document what config is needed to enable these links.

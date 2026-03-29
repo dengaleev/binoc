@@ -15,10 +15,13 @@ Observability playground — a minimal Go service paired with different monitori
 
 - Single-node, no HA — playground, not production
 - Minimal configuration — sensible defaults, works out of the box
+- Simplest ingestion path — prefer the approach with least configuration, not the most optimal
 - Three signals — metrics, logs, traces with cross-signal correlation
 - Single telemetry gateway — app never talks to backends directly
 - End-to-end traces — reverse proxy propagates trace context
 - Provisioned dashboards covering golden signals, logs, and traces
+- No auth — UIs accessible without login, registration, or API keys
+- Pinned image tags — all images use exact version tags, no `latest`
 
 ## Quickstart
 
@@ -55,13 +58,18 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 
 ## Adding a Stack
 
-Each stack in `stacks/<name>/` needs:
+Use the `/add-stack <name>` agent to scaffold a new stack. It handles research, scaffolding, self-review, validation, and end-to-end testing.
+
+Each stack in `stacks/<name>/` must follow the principles above:
 
 - [ ] `docker-compose.yml` — includes `../../docker-compose.base.yml`, adds backends
-- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on app service with `http://` scheme
-- [ ] Backend configs — one per signal (metrics, logs, traces)
-- [ ] `index.html` — landing page with endpoint links (`/api/` prefix) and tool links
-- [ ] All images pinned to exact version tags — no `latest`, no floating tags
+- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on app and caddy with `http://` scheme
+- [ ] Single telemetry gateway — receives OTLP from app, scrapes Prometheus metrics, routes to backends
+- [ ] All three signals collected and queryable with cross-signal correlation
+- [ ] No auth — UIs accessible without login
+- [ ] Provisioned dashboards — golden signals, logs, traces
+- [ ] `index.html` — landing page with endpoint and monitoring tool links
+- [ ] All images pinned to exact version tags
 
 ## Make Targets
 

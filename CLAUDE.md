@@ -40,6 +40,7 @@ service/
     server/                    # net/http handlers, middleware (otel, logging, metrics), background ticker
     store/                     # in-memory SQLite via otelsql, schema+seed in single SQL constant
 stacks/<name>/                 # each stack: docker-compose.yml + backend configs + provisioned dashboards
+.claude/agents/add-stack.md    # agent for scaffolding new stacks
 ```
 
 **Request flow:** Client → Caddy (`:80`, strips `/api/` prefix, adds trace span) → App (`:8080`) → response.
@@ -58,6 +59,16 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 - `/metrics` is excluded from tracing and logging via `isInternalPath`
 - Distroless container, read-only filesystem
 - No tests (playground project)
+
+## Stack principles
+
+See `README.md` for the full list. Key rules for adding or modifying stacks:
+
+- Simplest ingestion path — prefer the approach with least configuration, not the most optimal
+- Single telemetry gateway — app sends OTLP to one service, that service routes to backends and scrapes Prometheus metrics
+- No auth — UIs must be accessible without login, registration, or API keys
+- Pinned image tags — all images use exact version tags, no `latest`
+- Use the `/add-stack <name>` agent to scaffold new stacks
 
 ## Proxy environment
 
