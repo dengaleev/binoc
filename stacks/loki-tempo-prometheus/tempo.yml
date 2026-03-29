@@ -30,6 +30,8 @@ metrics_generator:
       dimensions: []
     span_metrics:
       dimensions: []
+    local_blocks:
+      flush_to_storage: false
   traces_storage:
     path: /var/tempo/generator/traces
 
@@ -39,3 +41,4 @@ overrides:
       processors:
         - service-graphs
         - span-metrics
+        - local-blocks
