@@ -31,10 +31,14 @@ processors:
     send_batch_size: 1024
 
 exporters:
-  otlp:
-    endpoint: clickstack:4317
-    tls:
-      insecure: true
+  clickhouse:
+    endpoint: tcp://clickstack:9000?dial_timeout=10s
+    database: default
+    create_schema: false
+    ttl: 168h
+    logs_table_name: otel_logs
+    traces_table_name: otel_traces
+    metrics_table_name: otel_metrics
 
 service:
   extensions: [health_check]
@@ -42,12 +46,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [clickhouse]
     metrics:
       receivers: [otlp, prometheus]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [clickhouse]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [clickhouse]

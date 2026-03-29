@@ -36,6 +36,7 @@ services:
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - mongo-data:/data/db
+      - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/default-user.xml:ro
     ports:
       - "8080:8080"
     healthcheck:
