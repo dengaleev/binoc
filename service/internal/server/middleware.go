@@ -100,7 +100,7 @@ func loggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 			attrs = append(attrs, "span_id", spanCtx.SpanID().String())
 		}
 
-		logger.Info("request", attrs...)
+		logger.InfoContext(r.Context(), "request", attrs...)
 	})
 }
 
