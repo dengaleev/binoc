@@ -2,12 +2,26 @@
 name: add-stack
 description: Scaffold a new observability stack for the binoc playground. Use when asked to add, create, or set up a new monitoring stack.
 model: sonnet
-tools: Read, Write, Edit, Bash, Glob, Grep
+tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 ---
 
 # Add a new observability stack
 
 Create `stacks/$ARGUMENTS/` with a working observability backend for the binoc service.
+
+## Phase 1 — Research
+
+Before writing any files, research the target backend:
+
+1. **Search** for the official Docker compose / quickstart setup for the backend (e.g. "Elastic observability docker compose OTLP", "SigNoz docker self-hosted")
+2. **Find** the recommended Docker images and their latest stable version tags
+3. **Understand** how the backend ingests each signal:
+   - Does it accept OTLP natively (gRPC/HTTP) or need the OTel Collector with a specific exporter?
+   - Does it need a separate component per signal or a unified endpoint?
+   - What ports does it expose (UI, ingest, API)?
+4. **Check** OTel Collector contrib exporter support — search for the relevant exporter in the collector-contrib docs and note required config fields
+5. **Identify** whether the backend bundles its own UI or needs Grafana (and if Grafana, which datasource plugin)
+6. **Note** any required companion services (databases, queues, config stores)
 
 ## Requirements
 
@@ -38,7 +52,7 @@ Pay attention to:
 - How the reference stack's `otel-collector.yml` wires Prometheus scraping for app metrics
 - Landing page structure matching the endpoint list
 
-## Steps
+## Phase 2 — Scaffold
 
 1. Read `docker-compose.base.yml`, both existing stacks, and `CLAUDE.md`
 2. Create `stacks/$ARGUMENTS/docker-compose.yml`
@@ -46,9 +60,13 @@ Pay attention to:
 4. Create backend-specific configs as needed
 5. Create `stacks/$ARGUMENTS/index.html`
 6. Add provisioned dashboards if the stack uses Grafana
-7. Validate compose config: `docker compose -f stacks/$ARGUMENTS/docker-compose.yml config`
-8. Update `README.md` stacks table
-9. Update `CLAUDE.md` build-and-run section
+
+## Phase 3 — Validate
+
+1. Run `docker compose -f stacks/$ARGUMENTS/docker-compose.yml config` and fix any errors
+2. Review each config file against the research findings — verify ports, endpoints, and auth match the backend docs
+3. Update `README.md` stacks table
+4. Update `CLAUDE.md` build-and-run section
 
 ## Conventions
 
