@@ -21,17 +21,18 @@ A single Go binary (`service/`) that exposes several HTTP endpoints behind a Cad
 
 ### Routes
 
+All app endpoints are published through Caddy under the `/api` prefix. Caddy strips the prefix before proxying to the app.
+
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/echo?msg=hello` | Returns the message as JSON. Simple request/response for basic traces. |
-| `POST` | `/echo` | Echoes the request body back. |
-| `GET` | `/notes` | List notes from in-memory SQLite (seeded on startup). Produces DB query spans via `otelsql`. |
-| `GET` | `/chain?msg=hello` | Calls `/echo` through Caddy, producing a distributed trace: Caddy → app → Caddy → app. |
-| `GET` | `/random` | Random 0-500ms delay, ~10% error rate. Makes latency and error panels interesting. |
+| `GET` | `/api/echo?msg=hello` | Returns the message as JSON. Simple request/response for basic traces. |
+| `POST` | `/api/echo` | Echoes the request body back. |
+| `GET` | `/api/notes` | List notes from in-memory SQLite (seeded on startup). Produces DB query spans via `otelsql`. |
+| `GET` | `/api/chain?msg=hello` | Calls `/api/echo` through Caddy, producing a distributed trace: Caddy → app → Caddy → app. |
+| `GET` | `/api/random` | Random 0-500ms delay, ~10% error rate. Makes latency and error panels interesting. |
 | `GET` | `/time` | Returns current time (served directly by Caddy, not proxied to app). |
-| `GET` | `/healthz` | Liveness probe. |
-| `GET` | `/readyz` | Readiness probe. |
-| `GET` | `/metrics` | Prometheus metrics. |
+
+Technical endpoints (`/healthz`, `/readyz`, `/metrics`) are only on the app container (`:8080`), not exposed through Caddy.
 
 ### Why these routes exist
 

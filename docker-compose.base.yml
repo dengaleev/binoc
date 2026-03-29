@@ -33,7 +33,7 @@ services:
     volumes:
       - ./service/Caddyfile:/etc/caddy/Caddyfile:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/healthz"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
       interval: 10s
       timeout: 3s
       retries: 3

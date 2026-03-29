@@ -18,7 +18,7 @@ func (s *Server) handleChain(w http.ResponseWriter, r *http.Request) {
 		msg = "chain"
 	}
 
-	target := fmt.Sprintf("%s/echo?msg=%s", s.selfURL, msg)
+	target := fmt.Sprintf("%s/api/echo?msg=%s", s.selfURL, msg)
 
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, target, nil)
 	if err != nil {
