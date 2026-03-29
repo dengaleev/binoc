@@ -54,6 +54,7 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 - No web framework; plain `net/http` with `ServeMux`
 - All app config via environment variables; OTEL-specific vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) handled by the SDK, not the app
 - Functional options pattern for `server.New(opts...)`
+- Always use context-aware slog methods (`InfoContext`, `ErrorContext`, etc.) when a `context.Context` is available — the `otelslog` bridge needs the context to propagate `TraceId`/`SpanId` to OTLP log records
 - `/metrics` is excluded from tracing and logging via `isInternalPath`
 - Distroless container, read-only filesystem
 - No tests (playground project)
