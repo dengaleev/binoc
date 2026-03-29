@@ -24,14 +24,8 @@ profile.cov
 go.work
 go.work.sum
 
-# Build output
-service/binoc
-
 # env file
 .env
-
-# Build-time proxy CA (environment-specific)
-proxy-ca.crt
 
 # Editor/IDE
 # .idea/
