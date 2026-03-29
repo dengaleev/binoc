@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/rand/v2"
-	"time"
 
 	"github.com/XSAM/otelsql"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -47,18 +45,32 @@ func New(ctx context.Context) (*Store, error) {
 		return nil, fmt.Errorf("registering db stats metrics: %w", err)
 	}
 
-	s := &Store{db: db}
-	if err := s.migrate(ctx); err != nil {
+	if _, err := db.ExecContext(ctx, initSQL); err != nil {
 		db.Close()
-		return nil, err
-	}
-	if err := s.seed(ctx); err != nil {
-		db.Close()
-		return nil, err
+		return nil, fmt.Errorf("initializing database: %w", err)
 	}
 
-	return s, nil
+	return &Store{db: db}, nil
 }
+
+const initSQL = `
+CREATE TABLE IF NOT EXISTS notes (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	title      TEXT NOT NULL,
+	content    TEXT NOT NULL DEFAULT '',
+	created_at TEXT NOT NULL
+);
+
+INSERT INTO notes (title, content, created_at)
+WITH RECURSIVE seq(i) AS (
+	SELECT 1 UNION ALL SELECT i + 1 FROM seq WHERE i < 5 + abs(random()) % 6
+)
+SELECT
+	'note-' || i,
+	'content-' || i,
+	datetime('now', '-' || i || ' hours')
+FROM seq;
+`
 
 // Close closes the database connection.
 func (s *Store) Close() error {
@@ -87,50 +99,4 @@ func (s *Store) List(ctx context.Context) ([]Note, error) {
 		return nil, fmt.Errorf("iterating notes: %w", err)
 	}
 	return notes, nil
-}
-
-func (s *Store) migrate(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `
-		CREATE TABLE IF NOT EXISTS notes (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			title      TEXT NOT NULL,
-			content    TEXT NOT NULL DEFAULT '',
-			created_at TEXT NOT NULL
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("running migration: %w", err)
-	}
-	return nil
-}
-
-var sampleNotes = []struct{ title, content string }{
-	{"Deploy v2.3.1", "Rolled out new caching layer to production"},
-	{"Incident #847", "Latency spike caused by connection pool exhaustion"},
-	{"Sprint retro", "Improve alerting thresholds for p99 latency"},
-	{"DB migration plan", "Add index on created_at for the events table"},
-	{"Load test results", "Sustained 12k rps with p95 under 50ms"},
-	{"On-call handoff", "Watch the memory usage on worker-3, trending up"},
-	{"Feature flag cleanup", "Remove stale flags from Q3 experiment"},
-	{"Cert rotation", "TLS certs expire in 14 days, auto-renew configured"},
-	{"Capacity review", "Current headroom at 40%, plan expansion for Q2"},
-	{"Runbook update", "Added steps for OTel collector restart procedure"},
-}
-
-func (s *Store) seed(ctx context.Context) error {
-	n := 3 + rand.IntN(len(sampleNotes)-3)
-	base := time.Now().UTC().Add(-time.Duration(n) * time.Hour)
-
-	for i := range n {
-		sample := sampleNotes[i]
-		ts := base.Add(time.Duration(i) * time.Hour).Format(time.RFC3339)
-		_, err := s.db.ExecContext(ctx,
-			`INSERT INTO notes (title, content, created_at) VALUES (?, ?, ?)`,
-			sample.title, sample.content, ts,
-		)
-		if err != nil {
-			return fmt.Errorf("seeding note: %w", err)
-		}
-	}
-	return nil
 }
