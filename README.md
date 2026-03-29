@@ -52,6 +52,19 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 |-------|-------------|
 | `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus, with OTel Collector |
 
+## Adding a Stack
+
+Each stack in `stacks/<name>/` needs:
+
+- [ ] `docker-compose.yml` — includes `../../docker-compose.base.yml`, adds backends and collector
+- [ ] OTel Collector config — receives OTLP on gRPC (:4317) and HTTP (:4318), exports to backends
+- [ ] Backend configs — one per signal (metrics store, log store, trace store)
+- [ ] `provisioning/datasources/ds.yml` — Grafana datasource definitions for each backend
+- [ ] `provisioning/dashboards/dashboards.yml` — Grafana dashboard provider config
+- [ ] `provisioning/dashboards/binoc-service.json` — dashboard with golden signals, logs, and traces
+- [ ] `index.html` — landing page with endpoint links (`/api/` prefix) and monitoring tool links
+- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on app service with `http://` scheme
+
 ## Make Targets
 
 | Target | Description |
