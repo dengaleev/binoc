@@ -1,8 +1,8 @@
 <clickhouse>
     <zookeeper>
         <node>
-            <host>clickhouse-keeper</host>
-            <port>9181</port>
+            <host>zookeeper</host>
+            <port>2181</port>
         </node>
     </zookeeper>
     <macros>

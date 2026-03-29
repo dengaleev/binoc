@@ -23,13 +23,19 @@ services:
 
   otel-collector:
     image: signoz/signoz-otel-collector:v0.144.2
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - "--config=/etc/otel-collector-config.yaml"
+      - >
+        /signoz-otel-collector migrate sync check &&
+        /signoz-otel-collector
+        --config=/etc/otel-collector-config.yaml
     volumes:
       - ./otel-collector.yml:/etc/otel-collector-config.yaml:ro
     environment:
       LOW_CARDINAL_EXCEPTION_GROUPING: "false"
       SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER: "cluster"
+      SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION: "true"
     depends_on:
       signoz-telemetrystore-migrator:
         condition: service_completed_successfully
@@ -58,20 +64,16 @@ services:
     environment:
       SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
       SIGNOZ_SQLSTORE_SQLITE_PATH: "/var/lib/signoz/signoz.db"
-      SIGNOZ_USER_ROOT_ENABLED: "true"
-      SIGNOZ_USER_ROOT_EMAIL: "admin@example.com"
-      SIGNOZ_USER_ROOT_PASSWORD: "Admin@Signoz1!"
-      SIGNOZ_USER_ROOT_ORG_NAME: "default"
+      SIGNOZ_TOKENIZER_JWT_SECRET: "secret"
     volumes:
       - signoz-sqlite:/var/lib/signoz
     ports:
       - "8888:8080"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/v1/health"]
-      interval: 15s
+      interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -80,40 +82,39 @@ services:
     restart: unless-stopped
 
   clickhouse:
-    image: clickhouse/clickhouse-server:26.3.2.3
+    image: clickhouse/clickhouse-server:25.5.6
     environment:
-      CLICKHOUSE_DB: ""
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      CLICKHOUSE_SKIP_USER_SETUP: "1"
     volumes:
       - clickhouse-data:/var/lib/clickhouse
-      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/signoz.xml:ro
+      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
       - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/signoz-users.xml:ro
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 3
     depends_on:
-      clickhouse-keeper:
+      zookeeper:
         condition: service_healthy
     restart: unless-stopped
 
-  clickhouse-keeper:
-    image: clickhouse/clickhouse-keeper:26.3.2.3-alpine
-    hostname: clickhouse-keeper
+  zookeeper:
+    image: signoz/zookeeper:3.7.1
+    environment:
+      ZOO_SERVER_ID: "1"
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_AUTOPURGE_INTERVAL: "1"
     volumes:
-      - keeper-data:/var/lib/clickhouse-keeper
-      - ./keeper-config.xml:/etc/clickhouse-keeper/keeper_config.xml:ro
+      - zookeeper-data:/bitnami/zookeeper
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo ruok | nc -w 1 localhost 9181 | grep imok"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null"]
+      interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 15s
+      retries: 3
     restart: unless-stopped
 
 volumes:
   clickhouse-data:
-  keeper-data:
+  zookeeper-data:
   signoz-sqlite:
