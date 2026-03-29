@@ -15,17 +15,21 @@ Observability playground — a minimal Go service paired with different monitori
 
 - Single-node, no HA — playground, not production
 - Minimal configuration — sensible defaults, works out of the box
+- Simplest ingestion path — prefer the approach with least configuration, not the most optimal
 - Three signals — metrics, logs, traces with cross-signal correlation
 - Single telemetry gateway — app never talks to backends directly
 - End-to-end traces — reverse proxy propagates trace context
 - Provisioned dashboards covering golden signals, logs, and traces
+- No auth — UIs accessible without login, registration, or API keys
+- Pinned image tags — all images use exact version tags, no `latest`
 
 ## Quickstart
 
 ```bash
 make up                                # starts the default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # or pick one explicitly
-make list                     # show available stacks
+make up STACK=clickstack              # ClickHouse + HyperDX
+make list                             # show available stacks
 ```
 
 Open http://localhost to see the navigation page with links to all endpoints and tools.
@@ -50,16 +54,12 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 
 | Stack | Description |
 |-------|-------------|
-| `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus, with OTel Collector |
+| `loki-tempo-prometheus` | Grafana + Loki + Tempo + Prometheus — separate backend per signal |
+| `clickstack` | HyperDX + ClickHouse — unified backend for all signals |
 
 ## Adding a Stack
 
-Each stack in `stacks/<name>/` needs:
-
-- [ ] `docker-compose.yml` — includes `../../docker-compose.base.yml`, adds backends
-- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on app service with `http://` scheme
-- [ ] Backend configs — one per signal (metrics, logs, traces)
-- [ ] `index.html` — landing page with endpoint links (`/api/` prefix) and tool links
+Use the `/add-stack <name> <description>` agent. It follows the stack principles above and handles research, scaffolding, self-review, validation, and end-to-end testing.
 
 ## Make Targets
 

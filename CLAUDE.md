@@ -2,15 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this is
-
-Observability playground — a minimal Go service paired with interchangeable monitoring stacks. The service produces traces, logs, and metrics; each stack collects and visualizes them.
-
 ## Build and run
 
 ```bash
 make up                                # build and start default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # explicit stack selection
+make up STACK=clickstack              # ClickHouse + HyperDX
 make down                     # stop and remove volumes
 make logs                     # tail all service logs
 ```
@@ -39,6 +36,7 @@ service/
     server/                    # net/http handlers, middleware (otel, logging, metrics), background ticker
     store/                     # in-memory SQLite via otelsql, schema+seed in single SQL constant
 stacks/<name>/                 # each stack: docker-compose.yml + backend configs + provisioned dashboards
+.claude/agents/add-stack.md    # agent for scaffolding new stacks
 ```
 
 **Request flow:** Client → Caddy (`:80`, strips `/api/` prefix, adds trace span) → App (`:8080`) → response.
@@ -53,9 +51,16 @@ stacks/<name>/                 # each stack: docker-compose.yml + backend config
 - No web framework; plain `net/http` with `ServeMux`
 - All app config via environment variables; OTEL-specific vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) handled by the SDK, not the app
 - Functional options pattern for `server.New(opts...)`
+- Always use context-aware slog methods (`InfoContext`, `ErrorContext`, etc.) when a `context.Context` is available — the `otelslog` bridge needs the context to propagate `TraceId`/`SpanId` to OTLP log records
 - `/metrics` is excluded from tracing and logging via `isInternalPath`
 - Distroless container, read-only filesystem
 - No tests (playground project)
+
+## Stack principles
+
+See the **Stack** section under **Principles** in `README.md` — that is the source of truth. Do not duplicate the list here.
+
+Use the `/add-stack <name> <description>` agent to scaffold new stacks.
 
 ## Proxy environment
 
