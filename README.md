@@ -58,18 +58,7 @@ Each stack lives in `stacks/<name>/` and extends `docker-compose.base.yml` for s
 
 ## Adding a Stack
 
-Use the `/add-stack <name>` agent to scaffold a new stack. It handles research, scaffolding, self-review, validation, and end-to-end testing.
-
-Each stack in `stacks/<name>/` must follow the principles above:
-
-- [ ] `docker-compose.yml` — includes `../../docker-compose.base.yml`, adds backends
-- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` set on app and caddy with `http://` scheme
-- [ ] Single telemetry gateway — receives OTLP from app, scrapes Prometheus metrics, routes to backends
-- [ ] All three signals collected and queryable with cross-signal correlation
-- [ ] No auth — UIs accessible without login
-- [ ] Provisioned dashboards — golden signals, logs, traces
-- [ ] `index.html` — landing page with endpoint and monitoring tool links
-- [ ] All images pinned to exact version tags
+Use the `/add-stack <name> <description>` agent. It follows the stack principles above and handles research, scaffolding, self-review, validation, and end-to-end testing.
 
 ## Make Targets
 
