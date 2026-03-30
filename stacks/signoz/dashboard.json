@@ -1,0 +1,164 @@
+{
+  "description": "Golden signals for the binoc service: request rate, latency, error rate, and in-flight requests",
+  "layout": [
+    {"h": 6, "i": "request-rate", "w": 6, "x": 0, "y": 0, "moved": false, "static": false},
+    {"h": 6, "i": "error-rate", "w": 6, "x": 6, "y": 0, "moved": false, "static": false},
+    {"h": 6, "i": "latency-p50-p95-p99", "w": 6, "x": 0, "y": 6, "moved": false, "static": false},
+    {"h": 6, "i": "in-flight", "w": 6, "x": 6, "y": 6, "moved": false, "static": false}
+  ],
+  "tags": ["binoc", "golden-signals"],
+  "title": "binoc service",
+  "uploadedGrafana": false,
+  "variables": {},
+  "version": "v5",
+  "widgets": [
+    {
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "columnUnits": {},
+      "description": "Requests per second by method and route",
+      "fillSpans": false,
+      "id": "request-rate",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"disabled": false, "legend": "", "name": "A", "query": ""}],
+        "id": "request-rate-query",
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "{{method}} {{route}}",
+            "name": "A",
+            "query": "sum(rate(binoc_requests_total[5m])) by (method, route)"
+          }
+        ],
+        "queryType": "promql"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [],
+      "softMax": 0,
+      "softMin": 0,
+      "thresholds": [],
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Request Rate",
+      "yAxisUnit": "ops"
+    },
+    {
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "columnUnits": {},
+      "description": "Percentage of 5xx responses over total requests",
+      "fillSpans": false,
+      "id": "error-rate",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"disabled": false, "legend": "", "name": "A", "query": ""}],
+        "id": "error-rate-query",
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "5xx error rate",
+            "name": "A",
+            "query": "sum(rate(binoc_requests_total{code=~\"5..\"}[5m])) / sum(rate(binoc_requests_total[5m])) * 100"
+          }
+        ],
+        "queryType": "promql"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [],
+      "softMax": 0,
+      "softMin": 0,
+      "thresholds": [],
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Error Rate (%)",
+      "yAxisUnit": "percent"
+    },
+    {
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "columnUnits": {},
+      "description": "Request duration percentiles (p50, p95, p99)",
+      "fillSpans": false,
+      "id": "latency-p50-p95-p99",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"disabled": false, "legend": "", "name": "A", "query": ""}],
+        "id": "latency-query",
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "p50",
+            "name": "A",
+            "query": "histogram_quantile(0.50, sum(rate(binoc_request_duration_seconds_bucket[5m])) by (le))"
+          },
+          {
+            "disabled": false,
+            "legend": "p95",
+            "name": "B",
+            "query": "histogram_quantile(0.95, sum(rate(binoc_request_duration_seconds_bucket[5m])) by (le))"
+          },
+          {
+            "disabled": false,
+            "legend": "p99",
+            "name": "C",
+            "query": "histogram_quantile(0.99, sum(rate(binoc_request_duration_seconds_bucket[5m])) by (le))"
+          }
+        ],
+        "queryType": "promql"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [],
+      "softMax": 0,
+      "softMin": 0,
+      "thresholds": [],
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Latency (p50 / p95 / p99)",
+      "yAxisUnit": "s"
+    },
+    {
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "columnUnits": {},
+      "description": "Current number of in-flight requests",
+      "fillSpans": false,
+      "id": "in-flight",
+      "isStacked": false,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"disabled": false, "legend": "", "name": "A", "query": ""}],
+        "id": "in-flight-query",
+        "promql": [
+          {
+            "disabled": false,
+            "legend": "in-flight",
+            "name": "A",
+            "query": "binoc_in_flight_requests"
+          }
+        ],
+        "queryType": "promql"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [],
+      "softMax": 0,
+      "softMin": 0,
+      "thresholds": [],
+      "timePreferance": "GLOBAL_TIME",
+      "title": "In-Flight Requests",
+      "yAxisUnit": "none"
+    }
+  ]
+}
