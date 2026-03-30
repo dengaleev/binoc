@@ -1,53 +1,59 @@
 #!/bin/sh
-# Provision the binoc service dashboard into SigNoz.
+# Provision the binoc service dashboard into SigNoz via the API.
 # Usage: ./provision-dashboard.sh [compose-project-name]
-# Runs after 'make up STACK=signoz' — copies SQLite DB from the container,
-# inserts the dashboard, and copies it back.
+#
+# Workaround: SigNoz's all-in-one image serves its SPA on the same port as
+# the API, and the SPA catch-all shadows /api/v1/login. We use the v2 session
+# endpoint instead and call the API from inside the Docker network (via the
+# zookeeper container which has curl).
 
 set -e
 
 PROJECT="${1:-binoc-signoz}"
-CONTAINER="${PROJECT}-signoz-1"
-DB_REMOTE="/var/lib/signoz/signoz.db"
-DB_LOCAL="/tmp/signoz-provision.db"
+SIGNOZ_URL="http://signoz:8080"
+CURL_CONTAINER="${PROJECT}-zookeeper-1"
+
+EMAIL="admin@example.com"
+PASSWORD='Admin@Signoz1!'
+ORG_ID="019d0000-0000-7000-8000-000000000001"
+
 DASHBOARD_JSON="$(dirname "$0")/dashboard.json"
 
-# Copy DB from container
-docker cp "$CONTAINER:$DB_REMOTE" "$DB_LOCAL"
+# Copy dashboard JSON into the curl container
+docker cp "$DASHBOARD_JSON" "$CURL_CONTAINER:/tmp/dashboard.json"
 
-# Insert dashboard if not exists
-python3 - "$DB_LOCAL" "$DASHBOARD_JSON" <<'PYEOF'
-import sqlite3, sys, json
+# Login
+LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s","orgId":"%s"}' "$EMAIL" "$PASSWORD" "$ORG_ID")
+printf '%s' "$LOGIN_PAYLOAD" > /tmp/signoz-login.json
+docker cp /tmp/signoz-login.json "$CURL_CONTAINER:/tmp/login.json"
 
-db_path, json_path = sys.argv[1], sys.argv[2]
-conn = sqlite3.connect(db_path)
-c = conn.cursor()
+TOKEN=$(docker exec "$CURL_CONTAINER" curl -sf -X POST "$SIGNOZ_URL/api/v2/sessions/email_password" \
+  -H 'Content-Type: application/json' -d @/tmp/login.json \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
 
-# Check if dashboard already exists
-c.execute("SELECT count(*) FROM dashboard WHERE json_extract(data, '$.title') = 'binoc service'")
-if c.fetchone()[0] > 0:
-    print("Dashboard already exists, skipping")
-    sys.exit(0)
+if [ -z "$TOKEN" ]; then
+  echo "Error: failed to get access token" >&2
+  exit 1
+fi
 
-# Get org_id from users
-c.execute("SELECT org_id FROM users LIMIT 1")
-row = c.fetchone()
-org_id = row[0] if row else "default"
+# Check if dashboard exists
+EXISTS=$(docker exec "$CURL_CONTAINER" curl -sf "$SIGNOZ_URL/api/v1/dashboards" \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -c "
+import sys, json
+dashboards = json.load(sys.stdin).get('data', [])
+print('yes' if any(d.get('data', {}).get('title') == 'binoc service' for d in dashboards) else 'no')
+")
 
-# Read dashboard JSON
-with open(json_path) as f:
-    data = f.read()
+if [ "$EXISTS" = "yes" ]; then
+  echo "Dashboard already exists, skipping"
+  exit 0
+fi
 
-import uuid
-dashboard_id = str(uuid.uuid4())
-c.execute(
-    "INSERT INTO dashboard (id, created_at, updated_at, created_by, updated_by, data, locked, org_id) VALUES (?, datetime('now'), datetime('now'), '', '', ?, 0, ?)",
-    (dashboard_id, data, org_id)
-)
-conn.commit()
-print("Dashboard provisioned successfully")
-PYEOF
+# Create dashboard
+docker exec "$CURL_CONTAINER" curl -sf -X POST "$SIGNOZ_URL/api/v1/dashboards" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d @/tmp/dashboard.json > /dev/null
 
-# Copy DB back
-docker cp "$DB_LOCAL" "$CONTAINER:$DB_REMOTE"
-rm -f "$DB_LOCAL"
+echo "Dashboard provisioned successfully"

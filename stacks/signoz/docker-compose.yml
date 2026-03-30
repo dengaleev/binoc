@@ -65,6 +65,7 @@ services:
       SIGNOZ_USER_ROOT_EMAIL: "admin@example.com"
       SIGNOZ_USER_ROOT_PASSWORD: "Admin@Signoz1!"
       SIGNOZ_USER_ROOT_ORG_NAME: "default"
+      SIGNOZ_USER_ROOT_ORG_ID: "019d0000-0000-7000-8000-000000000001"
     volumes:
       - signoz-sqlite:/var/lib/signoz
     ports:
