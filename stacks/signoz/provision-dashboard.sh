@@ -1,59 +1,43 @@
 #!/bin/sh
-# Provision the binoc service dashboard into SigNoz via the API.
-# Usage: ./provision-dashboard.sh [compose-project-name]
+# Provision the binoc service dashboard into SigNoz via its HTTP API.
+# Runs as the dashboard-provisioner one-shot service in docker-compose.yml
+# once signoz is healthy. Credentials come from the same SIGNOZ_USER_ROOT_*
+# env vars the signoz service uses (single-sourced via a YAML anchor).
 #
-# Workaround: SigNoz's all-in-one image serves its SPA on the same port as
-# the API, and the SPA catch-all shadows /api/v1/login. We use the v2 session
-# endpoint instead and call the API from inside the Docker network (via the
-# zookeeper container which has curl).
+# Note: the all-in-one image's SPA catch-all shadows /api/v1/login, so we
+# authenticate via the v2 session endpoint instead.
 
 set -e
 
-PROJECT="${1:-binoc-signoz}"
 SIGNOZ_URL="http://signoz:8080"
-CURL_CONTAINER="${PROJECT}-zookeeper-1"
+TITLE="binoc service"
 
-EMAIL="admin@example.com"
-PASSWORD='Admin@Signoz1!'
-ORG_ID="019d0000-0000-7000-8000-000000000001"
+login_payload="{\"email\":\"$SIGNOZ_USER_ROOT_EMAIL\",\"password\":\"$SIGNOZ_USER_ROOT_PASSWORD\",\"orgId\":\"$SIGNOZ_USER_ROOT_ORG_ID\"}"
 
-DASHBOARD_JSON="$(dirname "$0")/dashboard.json"
+# Root user reconciliation can lag the health endpoint by a moment — retry.
+token=""
+for _ in $(seq 1 30); do
+  token=$(wget -q -O- --header 'Content-Type: application/json' \
+    --post-data "$login_payload" "$SIGNOZ_URL/api/v2/sessions/email_password" \
+    2>/dev/null | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p') || true
+  if [ -n "$token" ]; then break; fi
+  sleep 2
+done
 
-# Copy dashboard JSON into the curl container
-docker cp "$DASHBOARD_JSON" "$CURL_CONTAINER:/tmp/dashboard.json"
-
-# Login
-LOGIN_PAYLOAD=$(printf '{"email":"%s","password":"%s","orgId":"%s"}' "$EMAIL" "$PASSWORD" "$ORG_ID")
-printf '%s' "$LOGIN_PAYLOAD" > /tmp/signoz-login.json
-docker cp /tmp/signoz-login.json "$CURL_CONTAINER:/tmp/login.json"
-
-TOKEN=$(docker exec "$CURL_CONTAINER" curl -sf -X POST "$SIGNOZ_URL/api/v2/sessions/email_password" \
-  -H 'Content-Type: application/json' -d @/tmp/login.json \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
-
-if [ -z "$TOKEN" ]; then
-  echo "Error: failed to get access token" >&2
+if [ -z "$token" ]; then
+  echo "error: could not log in to SigNoz" >&2
   exit 1
 fi
 
-# Check if dashboard exists
-EXISTS=$(docker exec "$CURL_CONTAINER" curl -sf "$SIGNOZ_URL/api/v1/dashboards" \
-  -H "Authorization: Bearer $TOKEN" \
-  | python3 -c "
-import sys, json
-dashboards = json.load(sys.stdin).get('data', [])
-print('yes' if any(d.get('data', {}).get('title') == 'binoc service' for d in dashboards) else 'no')
-")
+auth="Authorization: Bearer $token"
 
-if [ "$EXISTS" = "yes" ]; then
-  echo "Dashboard already exists, skipping"
+if wget -q -O- --header "$auth" "$SIGNOZ_URL/api/v1/dashboards" \
+  | grep -q "\"title\":\"$TITLE\""; then
+  echo "dashboard already exists"
   exit 0
 fi
 
-# Create dashboard
-docker exec "$CURL_CONTAINER" curl -sf -X POST "$SIGNOZ_URL/api/v1/dashboards" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d @/tmp/dashboard.json > /dev/null
+wget -q -O /dev/null --header "$auth" --header 'Content-Type: application/json' \
+  --post-data "$(cat /dashboard.json)" "$SIGNOZ_URL/api/v1/dashboards"
 
-echo "Dashboard provisioned successfully"
+echo "dashboard provisioned"

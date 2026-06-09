@@ -1,6 +1,13 @@
 include:
   - path: ../../docker-compose.base.yml
 
+x-signoz-root-user: &signoz-root-user
+  SIGNOZ_USER_ROOT_ENABLED: "true"
+  SIGNOZ_USER_ROOT_EMAIL: "admin@example.com"
+  SIGNOZ_USER_ROOT_PASSWORD: "Admin@Signoz1!"
+  SIGNOZ_USER_ROOT_ORG_NAME: "default"
+  SIGNOZ_USER_ROOT_ORG_ID: "019d0000-0000-7000-8000-000000000001"
+
 services:
   app:
     environment:
@@ -58,14 +65,10 @@ services:
   signoz:
     image: signoz/signoz:v0.117.1
     environment:
+      <<: *signoz-root-user
       SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN: "tcp://clickhouse:9000"
       SIGNOZ_SQLSTORE_SQLITE_PATH: "/var/lib/signoz/signoz.db"
       SIGNOZ_TOKENIZER_JWT_SECRET: "secret"
-      SIGNOZ_USER_ROOT_ENABLED: "true"
-      SIGNOZ_USER_ROOT_EMAIL: "admin@example.com"
-      SIGNOZ_USER_ROOT_PASSWORD: "Admin@Signoz1!"
-      SIGNOZ_USER_ROOT_ORG_NAME: "default"
-      SIGNOZ_USER_ROOT_ORG_ID: "019d0000-0000-7000-8000-000000000001"
     volumes:
       - signoz-sqlite:/var/lib/signoz
     ports:
@@ -75,12 +78,25 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 30s
     depends_on:
       clickhouse:
         condition: service_healthy
       signoz-telemetrystore-migrator:
         condition: service_completed_successfully
     restart: unless-stopped
+
+  dashboard-provisioner:
+    image: caddy:2.11.1-alpine
+    entrypoint: ["/bin/sh", "/provision-dashboard.sh"]
+    environment: *signoz-root-user
+    volumes:
+      - ./provision-dashboard.sh:/provision-dashboard.sh:ro
+      - ./dashboard.json:/dashboard.json:ro
+    depends_on:
+      signoz:
+        condition: service_healthy
+    restart: on-failure
 
   clickhouse:
     image: clickhouse/clickhouse-server:25.5.6
@@ -95,6 +111,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 30s
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -113,6 +130,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 15s
     restart: unless-stopped
 
 volumes:
