@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 make up                                # build and start default stack (loki-tempo-prometheus)
 make up STACK=loki-tempo-prometheus    # explicit stack selection
 make up STACK=clickstack              # ClickHouse + HyperDX
+make up STACK=signoz                  # SigNoz + ClickHouse
 make down                     # stop and remove volumes
 make logs                     # tail all service logs
 ```
@@ -87,7 +88,7 @@ no_proxy=localhost,127.0.0.1 go mod tidy
 }
 ```
 
-**4. Docker build** — the daemon proxy only covers image pulls, not processes inside the build. Pass proxy vars as build args and add the proxy CA cert to the Dockerfile. The proxy does TLS inspection, so without the CA cert `go mod download` fails with `x509: certificate signed by unknown authority`.
+**4. Docker build** — the daemon proxy only covers image pulls, not processes inside the build. Pass proxy vars as build args.
 
 Add to `docker-compose.base.yml` → `services.app.build`:
 
@@ -102,9 +103,4 @@ Add to `service/Dockerfile` before `go mod download`:
 
 ```dockerfile
 ARG HTTP_PROXY HTTPS_PROXY NO_PROXY
-
-COPY proxy-ca.crt* /usr/local/share/ca-certificates/
-RUN if [ -f /usr/local/share/ca-certificates/proxy-ca.crt ]; then \
-      cat /usr/local/share/ca-certificates/proxy-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
-    fi
 ```

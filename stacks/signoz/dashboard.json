@@ -1,0 +1,344 @@
+{
+  "description": "Golden signals for the binoc service derived from OpenTelemetry spans",
+  "layout": [
+    {"h": 6, "i": "request-rate", "w": 6, "x": 0, "y": 0, "moved": false, "static": false},
+    {"h": 6, "i": "error-rate", "w": 6, "x": 6, "y": 0, "moved": false, "static": false},
+    {"h": 6, "i": "latency-p50-p95-p99", "w": 6, "x": 0, "y": 6, "moved": false, "static": false},
+    {"h": 6, "i": "calls-by-operation", "w": 6, "x": 6, "y": 6, "moved": false, "static": false}
+  ],
+  "tags": ["binoc", "golden-signals"],
+  "title": "binoc service",
+  "uploadedGrafana": false,
+  "variables": {},
+  "version": "v5",
+  "widgets": [
+    {
+      "description": "Span-derived request rate by operation",
+      "id": "request-rate",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_calls_total",
+                  "reduceTo": "sum",
+                  "spaceAggregation": "sum",
+                  "temporality": null,
+                  "timeAggregation": "rate"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "A",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  },
+                  {
+                    "id": "kind-filter",
+                    "key": {"dataType": "string", "key": "span.kind", "type": "tag"},
+                    "op": "=",
+                    "value": "SPAN_KIND_SERVER"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [
+                {"dataType": "string", "key": "operation", "type": "tag"}
+              ],
+              "having": {"expression": ""},
+              "legend": "{{operation}}",
+              "queryName": "A",
+              "stepInterval": 60
+            }
+          ],
+          "queryFormulas": []
+        },
+        "queryType": "builder"
+      },
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Request Rate",
+      "yAxisUnit": "ops"
+    },
+    {
+      "description": "Percentage of errored spans (status_code = ERROR) over total spans",
+      "id": "error-rate",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_calls_total",
+                  "reduceTo": "sum",
+                  "spaceAggregation": "sum",
+                  "temporality": null,
+                  "timeAggregation": "rate"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "A",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  },
+                  {
+                    "id": "kind-filter",
+                    "key": {"dataType": "string", "key": "span.kind", "type": "tag"},
+                    "op": "=",
+                    "value": "SPAN_KIND_SERVER"
+                  },
+                  {
+                    "id": "error-filter",
+                    "key": {"dataType": "string", "key": "status.code", "type": "tag"},
+                    "op": "=",
+                    "value": "STATUS_CODE_ERROR"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [],
+              "having": {"expression": ""},
+              "legend": "errors",
+              "queryName": "A",
+              "stepInterval": 60
+            },
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_calls_total",
+                  "reduceTo": "sum",
+                  "spaceAggregation": "sum",
+                  "temporality": null,
+                  "timeAggregation": "rate"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "B",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter-2",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  },
+                  {
+                    "id": "kind-filter-2",
+                    "key": {"dataType": "string", "key": "span.kind", "type": "tag"},
+                    "op": "=",
+                    "value": "SPAN_KIND_SERVER"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [],
+              "having": {"expression": ""},
+              "legend": "total",
+              "queryName": "B",
+              "stepInterval": 60
+            }
+          ],
+          "queryFormulas": [
+            {
+              "disabled": false,
+              "expression": "(A / B) * 100",
+              "legend": "error %",
+              "queryName": "F1"
+            }
+          ]
+        },
+        "queryType": "builder"
+      },
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Error Rate (%)",
+      "yAxisUnit": "percent"
+    },
+    {
+      "description": "Span-derived latency percentiles (p50, p95, p99)",
+      "id": "latency-p50-p95-p99",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_latency",
+                  "reduceTo": "p50",
+                  "spaceAggregation": "p50",
+                  "temporality": null,
+                  "timeAggregation": "p50"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "A",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter-3",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  },
+                  {
+                    "id": "kind-filter-3",
+                    "key": {"dataType": "string", "key": "span.kind", "type": "tag"},
+                    "op": "=",
+                    "value": "SPAN_KIND_SERVER"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [],
+              "having": {"expression": ""},
+              "legend": "p50",
+              "queryName": "A",
+              "stepInterval": 60
+            },
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_latency",
+                  "reduceTo": "p95",
+                  "spaceAggregation": "p95",
+                  "temporality": null,
+                  "timeAggregation": "p95"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "B",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter-4",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  },
+                  {
+                    "id": "kind-filter-4",
+                    "key": {"dataType": "string", "key": "span.kind", "type": "tag"},
+                    "op": "=",
+                    "value": "SPAN_KIND_SERVER"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [],
+              "having": {"expression": ""},
+              "legend": "p95",
+              "queryName": "B",
+              "stepInterval": 60
+            },
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_latency",
+                  "reduceTo": "p99",
+                  "spaceAggregation": "p99",
+                  "temporality": null,
+                  "timeAggregation": "p99"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "C",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter-5",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  },
+                  {
+                    "id": "kind-filter-5",
+                    "key": {"dataType": "string", "key": "span.kind", "type": "tag"},
+                    "op": "=",
+                    "value": "SPAN_KIND_SERVER"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [],
+              "having": {"expression": ""},
+              "legend": "p99",
+              "queryName": "C",
+              "stepInterval": 60
+            }
+          ],
+          "queryFormulas": []
+        },
+        "queryType": "builder"
+      },
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Latency (p50 / p95 / p99)",
+      "yAxisUnit": "ms"
+    },
+    {
+      "description": "Total span count by operation",
+      "id": "calls-by-operation",
+      "panelTypes": "graph",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "aggregations": [
+                {
+                  "metricName": "signoz_calls_total",
+                  "reduceTo": "sum",
+                  "spaceAggregation": "sum",
+                  "temporality": null,
+                  "timeAggregation": "sum"
+                }
+              ],
+              "dataSource": "metrics",
+              "disabled": false,
+              "expression": "A",
+              "filters": {
+                "items": [
+                  {
+                    "id": "svc-filter-6",
+                    "key": {"dataType": "string", "key": "service.name", "type": "tag"},
+                    "op": "=",
+                    "value": "binoc"
+                  }
+                ],
+                "op": "AND"
+              },
+              "groupBy": [
+                {"dataType": "string", "key": "operation", "type": "tag"},
+                {"dataType": "string", "key": "span.kind", "type": "tag"}
+              ],
+              "having": {"expression": ""},
+              "legend": "{{operation}} ({{span.kind}})",
+              "queryName": "A",
+              "stepInterval": 60
+            }
+          ],
+          "queryFormulas": []
+        },
+        "queryType": "builder"
+      },
+      "timePreferance": "GLOBAL_TIME",
+      "title": "Calls by Operation",
+      "yAxisUnit": "none"
+    }
+  ]
+}
